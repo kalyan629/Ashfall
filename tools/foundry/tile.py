@@ -112,6 +112,13 @@ def main():
     ap.add_argument("--steps", type=int, default=32)
     ap.add_argument("--limit", type=int, default=0, help="0 = no limit; smoke test uses 2")
     ap.add_argument("--seed", type=int, default=20260821)
+    ap.add_argument("--guidance", type=float, default=5.5,
+                    help="lower keeps it photographic; high pushes it stylised")
+    ap.add_argument("--dtype", choices=["fp16", "fp32"], default="fp16",
+                    help="1080 Ti is Pascal, whose fp16 rate is 1/64 of fp32 -- "
+                         "fp32 can be FASTER here despite the memory cost")
+    ap.add_argument("--offload", action="store_true",
+                    help="sequential CPU offload; needed to fit fp32 in 11 GB")
     ap.add_argument("--manifest", default=os.path.join(HERE, "prompts_materials.json"))
     args = ap.parse_args()
 
@@ -137,17 +144,45 @@ def main():
     torch.cuda.set_device(0)  # each process sees one GPU via CUDA_VISIBLE_DEVICES
 
     base_dir, vae_dir = local_snapshot(BASE), local_snapshot(VAE)
-    print(f"[rank {args.rank}] base={base_dir}", flush=True)
+    dtype = torch.float16 if args.dtype == "fp16" else torch.float32
+    print(f"[rank {args.rank}] base={base_dir} dtype={args.dtype}", flush=True)
 
-    vae = AutoencoderKL.from_pretrained(vae_dir, torch_dtype=torch.float16)
+    # The weights on disk are the fp16 variant either way; torch_dtype decides
+    # what they are upcast to in memory.
+    vae = AutoencoderKL.from_pretrained(vae_dir, torch_dtype=dtype)
     pipe = StableDiffusionXLPipeline.from_pretrained(
-        base_dir, vae=vae, torch_dtype=torch.float16,
+        base_dir, vae=vae, torch_dtype=dtype,
         variant="fp16", use_safetensors=True,
-    ).to("cuda")
+    )
+    if args.offload:
+        pipe.enable_sequential_cpu_offload()
+    else:
+        pipe = pipe.to("cuda")
+    pipe.enable_attention_slicing()
+    pipe.enable_vae_slicing()
     pipe.set_progress_bar_config(disable=True)
 
     n = make_tileable(pipe.unet, pipe.vae)
     print(f"[rank {args.rank}] circular padding applied to {n} conv layers", flush=True)
+
+    # Token budget check. CLIP silently truncates at 77 and returns no error,
+    # so an over-budget prompt looks like it worked and simply ignores its own
+    # tail. Fail loudly here instead of discovering it in the output.
+    tok = pipe.tokenizer
+    over = []
+    for mat in mine:
+        p = f"{zone_style[mat['zone']]}, {mat['prompt']}"
+        n = len(tok(p).input_ids)
+        if n > tok.model_max_length:
+            over.append((mat["slug"], n))
+    if over:
+        print(f"[rank {args.rank}] WARNING: {len(over)} prompts exceed "
+              f"{tok.model_max_length} tokens and WILL be truncated:", flush=True)
+        for slug, n in over:
+            print(f"    {slug}: {n} tokens", flush=True)
+    else:
+        print(f"[rank {args.rank}] all prompts within the "
+              f"{tok.model_max_length}-token budget", flush=True)
 
     os.makedirs(OUT, exist_ok=True)
     timing = {"rank": args.rank, "world": args.world, "items": []}
@@ -155,7 +190,14 @@ def main():
 
     for mat in mine:
         slug, zone = mat["slug"], mat["zone"]
-        prompt = f"{mat['prompt']}, {zone_style[zone]}"
+        # Zone style FIRST. CLIP truncates at 77 tokens and drops the tail, so
+        # anything at the end is the thing that silently vanishes. The lighting
+        # clause ("no shadows, flat even light, albedo") has to survive, so it
+        # leads; the material description is what gets clipped if anything does.
+        prompt = f"{zone_style[zone]}, {mat['prompt']}"
+        # Per-material negatives exist because some slugs drift to a nearby
+        # archetype -- shotcrete becomes brickwork, rock face becomes paving.
+        neg = f"{negative}, {mat['negative']}" if mat.get("negative") else negative
         d = os.path.join(OUT, slug)
         os.makedirs(d, exist_ok=True)
 
@@ -167,10 +209,10 @@ def main():
             g = torch.Generator("cuda").manual_seed(seed)
             img = pipe(
                 prompt=prompt,
-                negative_prompt=negative,
+                negative_prompt=neg,
                 width=SIZE, height=SIZE,
                 num_inference_steps=args.steps,
-                guidance_scale=6.5,
+                guidance_scale=args.guidance,
                 generator=g,
             ).images[0]
 
