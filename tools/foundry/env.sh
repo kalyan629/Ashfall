@@ -11,6 +11,13 @@
 
 export FOUNDRY_ROOT="${FOUNDRY_ROOT:-/homekipchoge/kalyanb/ashfall-foundry}"
 
+# uv lives here and is NOT on the default non-interactive PATH. Kipchoge's
+# system python3 has no ensurepip, so `python3 -m venv` fails outright with no
+# sudo available -- uv is the only way to build a venv on this box. This is
+# also how interior/venv was created (its pyvenv.cfg records uv 0.11.21).
+export PATH="$HOME/.local/bin:$PATH"
+export UV_CACHE_DIR="/homekipchoge/kalyanb/interior/models/uvcache"
+
 # Reuse the interior project's model cache READ-ONLY. SDXL base, the fp16 VAE
 # fix, controlnet-depth-sdxl-1.0 and Depth-Anything-V2-Small are all already
 # downloaded there -- roughly 17 GB we do not need to fetch again.

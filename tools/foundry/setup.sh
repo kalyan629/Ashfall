@@ -17,21 +17,23 @@ HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 echo "FOUNDRY_ROOT = $FOUNDRY_ROOT"
 
+# uv, not `python3 -m venv` -- the system python has no ensurepip and there is
+# no sudo on this box. uv is also what built interior/venv, so this matches.
+command -v uv >/dev/null || { echo "uv not found on PATH ($PATH)" >&2; exit 1; }
+
 if [ ! -d "$FOUNDRY_ROOT/venv" ]; then
-  echo "Creating venv..."
-  python3 -m venv "$FOUNDRY_ROOT/venv"
+  echo "Creating venv with uv..."
+  uv venv --python 3.12 "$FOUNDRY_ROOT/venv"
 fi
 . "$FOUNDRY_ROOT/venv/bin/activate"
 
-python -m pip install --upgrade pip -q
-
-echo "Installing pinned deps (from interior's pip cache where possible)..."
-pip install -q \
+echo "Installing pinned deps (uv, reusing interior's cache)..."
+uv pip install -q \
   --extra-index-url https://download.pytorch.org/whl/cu121 \
   "torch==2.5.1+cu121" \
   "torchvision==0.20.1+cu121"
 
-pip install -q \
+uv pip install -q \
   "diffusers==0.39.0" \
   "transformers==5.14.1" \
   "accelerate==1.14.0" \
