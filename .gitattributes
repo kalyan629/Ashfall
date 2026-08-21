@@ -1,0 +1,8 @@
+# Force LF in the repo. This code travels to Kipchoge (Linux);
+# CRLF has caused silent corruption on this machine before.
+* text=auto eol=lf
+
+*.png binary
+*.jpg binary
+*.ktx2 binary
+*.glb binary
