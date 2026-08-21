@@ -24,6 +24,12 @@ export UV_CACHE_DIR="/homekipchoge/kalyanb/interior/models/uvcache"
 # COUPLING: if ~/interior is ever deleted, set this to
 # "$FOUNDRY_ROOT/models/hf/hub" and the models re-download.
 export INTERIOR_HUB="/homekipchoge/kalyanb/interior/models/hf/hub"
+
+# huggingface_hub 1.x reads HF_HUB_CACHE. The older HUGGINGFACE_HUB_CACHE is
+# IGNORED as of 1.28 -- setting only that one silently resolves to the default
+# ~/.cache/huggingface/hub and every model reports "not cached locally".
+# Both are set so this works regardless of which version is installed.
+export HF_HUB_CACHE="$INTERIOR_HUB"
 export HUGGINGFACE_HUB_CACHE="$INTERIOR_HUB"
 export HF_HOME="$FOUNDRY_ROOT/models/hf"
 
