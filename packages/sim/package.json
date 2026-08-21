@@ -7,13 +7,18 @@
   "exports": {
     ".": "./src/sim.ts",
     "./agent": "./src/agent.ts",
-    "./core": "./src/core.ts"
+    "./core": "./src/core.ts",
+    "./persist": "./src/persist.ts",
+    "./snapshot": "./src/snapshot.ts",
+    "./events": "./src/events.ts",
+    "./audit": "./src/audit.ts"
   },
   "scripts": {
     "exp": "tsx experiments/run.ts",
     "chain": "tsx experiments/chain.ts",
     "audit": "tsx experiments/audit.ts",
-    "persist": "tsx experiments/persist.ts"
+    "persist": "tsx experiments/persist.ts",
+    "restart": "tsx experiments/restart.ts"
   },
   "devDependencies": {
     "tsx": "^4.19.2",

@@ -22,8 +22,11 @@ import {
 import {
   createSim,
   step as simStep,
+  WORLD_SECONDS_PER_TICK,
   type Sim,
 } from "@ashfall/sim";
+import { JsonlEventStore } from "@ashfall/sim/persist";
+import { serializeSim, restoreSim, type WorldSnapshot } from "@ashfall/sim/snapshot";
 import { dominantNeed, type Agent } from "@ashfall/sim/agent";
 
 /** Where people in the Commons actually go, and why. */
@@ -82,11 +85,27 @@ interface Body {
   rethink: number;
 }
 
+/** Cognition ticks per real second while the server is up. */
+const COGNITION_HZ = 5;
+
+/**
+ * Ceiling on offline catch-up, in ticks.
+ *
+ * A world left down for a month must not spend twenty minutes simulating its
+ * way back before the first player can connect. Beyond this the gap is
+ * acknowledged rather than lived through — survivors will have needs and
+ * beliefs consistent with the cap, not with the true elapsed time. That is a
+ * deliberate, documented approximation, not an accident.
+ */
+const MAX_CATCHUP_TICKS = 20_000; // ~66 world-hours
+
 export class Population {
   sim: Sim;
   private bodies: Body[] = [];
   /** The sim runs slower than the netcode. Cognition does not need 20 Hz. */
   private simAccumulator = 0;
+  private store: JsonlEventStore<WorldSnapshot> | null = null;
+  private ticksSinceSave = 0;
 
   constructor(count: number, seed = 20260821) {
     this.sim = createSim({ seed, population: count, memoryMode: "episodic" });
@@ -147,6 +166,84 @@ export class Population {
     b.rethink = 240 + Math.floor(r() * 360);
   }
 
+  /**
+   * Attach durable storage, restore any existing world, and live through the
+   * time the server was down.
+   *
+   * OFFLINE FAST-FORWARD uses approach B: run the real simulation, headless,
+   * as fast as the CPU allows. Not an approximation of cognition — the actual
+   * cognition, just without a 200 ms wait between ticks. The headless design
+   * that exists for experiments is exactly what makes this possible, so an
+   * offline gap is literally an accelerated experiment run on the same engine.
+   *
+   * The alternative — analytically advancing needs and skipping gossip — would
+   * mean the world evolves by different rules when unobserved, which is the one
+   * thing a persistent world cannot afford.
+   */
+  async attach(dir: string): Promise<{ restored: boolean; caughtUp: number }> {
+    const store = new JsonlEventStore<WorldSnapshot>(dir);
+    await store.init();
+    this.store = store;
+
+    const loaded = await store.restore();
+    if (!loaded) return { restored: false, caughtUp: 0 };
+
+    restoreSim(this.sim, loaded.state);
+    // Bodies are NOT persisted. Positions are cheap to regenerate and nobody
+    // notices a survivor standing two metres from where they were; beliefs and
+    // grudges are what must survive. Rebind bodies onto the restored agents.
+    this.rebind();
+
+    const savedAt = (loaded.state as WorldSnapshot & { savedAtMs?: number }).savedAtMs;
+    if (!savedAt) return { restored: true, caughtUp: 0 };
+
+    const downSeconds = Math.max(0, (Date.now() - savedAt) / 1000);
+    const owed = Math.floor(downSeconds * COGNITION_HZ);
+    const catchup = Math.min(owed, MAX_CATCHUP_TICKS);
+
+    for (let i = 0; i < catchup; i++) simStep(this.sim);
+    if (catchup > 0) this.advanceBodies(Math.min(catchup / COGNITION_HZ, 600));
+
+    return { restored: true, caughtUp: catchup };
+  }
+
+  /** Point bodies at the restored agent objects. */
+  private rebind(): void {
+    const old = new Map(this.bodies.map((b) => [b.agent.identity.id, b]));
+    this.bodies = this.sim.agents.map((agent) => {
+      const prev = old.get(agent.identity.id);
+      const r = agent.rng;
+      const start = WAYPOINTS[WORKPLACE[agent.identity.occupation] ?? "canteen"];
+      return {
+        agent,
+        pos: prev?.pos ?? {
+          x: start.x + (r() - 0.5) * start.spread * 2,
+          z: start.z + (r() - 0.5) * start.spread * 2,
+        },
+        target: prev?.target ?? { x: start.x, z: start.z },
+        activity: prev?.activity ?? start.activity,
+        destination: prev?.destination ?? start.name,
+        satisfied: false,
+        rethink: 1,
+      };
+    });
+  }
+
+  /** Move bodies without re-running cognition, used during catch-up. */
+  private advanceBodies(seconds: number): void {
+    for (let t = 0; t < seconds; t += 0.05) this.moveBodies(0.05);
+  }
+
+  async save(): Promise<void> {
+    if (!this.store) return;
+    await this.store.append([...this.sim.log.all()]);
+    const snap = serializeSim(this.sim) as WorldSnapshot & { savedAtMs: number };
+    // The wall-clock stamp is what makes offline duration knowable. worldTime
+    // alone cannot tell you how long the process was actually down.
+    snap.savedAtMs = Date.now();
+    await this.store.snapshot(snap);
+  }
+
   /** @param dt seconds since last call */
   update(dt: number): void {
     // Cognition at ~5 Hz. Beliefs and gossip do not need netcode cadence, and
@@ -157,6 +254,18 @@ export class Population {
       this.simAccumulator -= 0.2;
     }
 
+    // Periodic snapshot. Every ~30 s of real time bounds worst-case loss to
+    // that window; the durable event log covers what happened in between.
+    if (this.store && ++this.ticksSinceSave >= 600) {
+      this.ticksSinceSave = 0;
+      void this.save().catch((e) => console.error("[ashfall] snapshot failed:", e));
+    }
+
+    this.moveBodies(dt);
+  }
+
+  /** One step of physical movement for every body. */
+  private moveBodies(dt: number): void {
     for (const b of this.bodies) {
       if (--b.rethink <= 0) this.chooseTarget(b);
 

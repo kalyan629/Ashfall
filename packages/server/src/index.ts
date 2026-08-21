@@ -16,6 +16,7 @@
  * this file will ever get.
  */
 
+import path from "node:path";
 import { WebSocketServer, type WebSocket } from "ws";
 import { Population } from "./population.js";
 import {
@@ -64,9 +65,59 @@ let tick = 0;
 // without the naive O(n) snapshot scan mattering yet.
 const population = new Population(60);
 
+// Marrow persists. Restore whatever was there, then live through however long
+// the process was down before accepting the first connection — a player must
+// never arrive mid-catch-up and watch the world lurch.
+// Resolved to an ABSOLUTE path and logged. A relative default silently moves
+// depending on how the process was launched — npm run --workspace sets cwd to
+// the package, so "./world" landed in packages/server/world rather than the
+// repo root. A persistent world that saves somewhere different depending on
+// the launch command is not persistent.
+const WORLD_DIR = path.resolve(process.env.ASHFALL_WORLD ?? "./world");
+const boot = await population.attach(WORLD_DIR);
+if (boot.restored) {
+  const hours = ((boot.caughtUp * 12) / 3600).toFixed(1);
+  console.log(
+    `[ashfall] restored Marrow from ${WORLD_DIR} ` +
+      (boot.caughtUp > 0
+        ? `— simulated ${boot.caughtUp} ticks (${hours} world-hours) of absence`
+        : "— no time had passed")
+  );
+} else {
+  console.log(`[ashfall] no saved world at ${WORLD_DIR}; Marrow begins`);
+}
+
 const wss = new WebSocketServer({ port: PORT });
 console.log(`[ashfall] authoritative server listening on :${PORT}`);
-console.log(`[ashfall] ${population.count} survivors in Marrow`);
+console.log(`[ashfall] ${population.count} survivors in Marrow, world time ${(population.sim.worldTime / 3600).toFixed(1)}h`);
+
+/**
+ * Save on the way out.
+ *
+ * Without this, every clean shutdown loses up to 30 s of world — and worse,
+ * the wall-clock stamp would be stale, so the next boot would fast-forward
+ * through time the world had already lived. Idempotent because SIGINT can
+ * arrive twice if someone is impatient.
+ */
+let shuttingDown = false;
+for (const sig of ["SIGINT", "SIGTERM"] as const) {
+  process.on(sig, () => {
+    if (shuttingDown) return;
+    shuttingDown = true;
+    console.log(`
+[ashfall] ${sig} — saving Marrow...`);
+    population
+      .save()
+      .then(() => {
+        console.log("[ashfall] world saved. Marrow persists.");
+        process.exit(0);
+      })
+      .catch((e) => {
+        console.error("[ashfall] SAVE FAILED:", e);
+        process.exit(1);
+      });
+  });
+}
 
 wss.on("connection", (socket) => {
   const id = String(nextId++);

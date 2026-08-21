@@ -15,3 +15,5 @@ coverage/
 assets/generated/
 *.ktx2
 .playwright-out/
+packages/server/world/
+world/
