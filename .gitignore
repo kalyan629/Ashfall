@@ -1,0 +1,16 @@
+node_modules/
+dist/
+build/
+*.log
+.env
+.env.*
+!.env.example
+.DS_Store
+Thumbs.db
+.vite/
+coverage/
+*.tsbuildinfo
+
+# generated art (large) - regenerate on Kipchoge
+assets/generated/
+*.ktx2
