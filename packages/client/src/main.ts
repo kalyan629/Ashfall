@@ -63,31 +63,77 @@ addEventListener("resize", () => {
 // --- textures -------------------------------------------------------------
 const loader = new THREE.TextureLoader();
 
-function tex(slug: string, repeat: number): THREE.Texture {
-  const t = loader.load(`/tex/${slug}.webp`);
+function tex(file: string, repeat: number, srgb: boolean): THREE.Texture {
+  const t = loader.load(`/tex/${file}.webp`);
   t.wrapS = t.wrapT = THREE.RepeatWrapping;
   t.repeat.set(repeat, repeat);
-  t.colorSpace = THREE.SRGBColorSpace;
+  // COLOUR SPACE MATTERS AND IS EASY TO GET WRONG. Albedo is authored in sRGB
+  // and must be tagged as such. Normal and AO maps are DATA, not colour —
+  // tagging them sRGB applies a gamma curve to vectors and occlusion values,
+  // which produces normals that are subtly but consistently wrong.
+  if (srgb) t.colorSpace = THREE.SRGBColorSpace;
   t.anisotropy = renderer.capabilities.getMaxAnisotropy();
   return t;
 }
 
-/** Reuse the albedo as a bump map.
+/** Scalar PBR properties, generated alongside the maps by tools/foundry/pbr.py. */
+interface MatSpec {
+  roughness: number;
+  metalness: number;
+  normalScale: number;
+}
+let matSpecs: Record<string, MatSpec> = {};
+
+// Top-level await: every material below reads these scalars at construction
+// time, so the fetch has to complete before the scene is built. Vite supports
+// this in ESM and it keeps material creation synchronous and readable.
+try {
+  matSpecs = await (await fetch("/tex/materials.json")).json();
+} catch {
+  // Missing manifest must not blank the world — fall back to sane defaults.
+  console.warn("[ashfall] materials.json unavailable; using default PBR scalars");
+}
+
+/**
+ * aoMap samples uv1, not uv. Three.js primitives only author uv, so without
+ * copying the attribute across the AO map silently does nothing — the textures
+ * load, no error is raised, and the corners simply never darken.
+ */
+function enableAO(geo: THREE.BufferGeometry): THREE.BufferGeometry {
+  if (!geo.getAttribute("uv1") && geo.getAttribute("uv")) {
+    geo.setAttribute("uv1", geo.getAttribute("uv"));
+  }
+  return geo;
+}
+
+/**
+ * A full PBR material: albedo + normal + baked AO, with roughness and
+ * metalness read from the foundry manifest rather than guessed here.
  *
- *  Not a real normal map — a proper one needs a height pass the foundry does
- *  not generate yet (Phase 4 follow-up). But luminance correlates well enough
- *  with depth on these materials that it reads convincingly under a moving
- *  light, and it costs one extra sampler. */
-function surface(slug: string, repeat: number, bump = 0.25): THREE.MeshStandardMaterial {
-  const map = tex(slug, repeat);
-  const bumpTex = tex(slug, repeat);
-  return new THREE.MeshStandardMaterial({
-    map,
-    bumpMap: bumpTex,
-    bumpScale: bump,
-    roughness: 0.92,
-    metalness: 0.05,
+ * The normal maps come from a real monocular depth pass (Depth-Anything-V2),
+ * not from albedo luminance. That distinction matters for this material set:
+ * luminance-as-height embosses PIGMENT as geometry, so hazard-yellow stencil
+ * on `signage_painted` would appear carved into the steel.
+ *
+ * AO is baked rather than screen-space. On a GTX 1650 at 1080p, SSAO is a real
+ * frame cost, and since the foundry generates these textures anyway, cavity
+ * occlusion in the texture is close to free and gets most of the corner
+ * darkening. SSAO remains worth adding later for contact shadows BETWEEN
+ * objects, which a texture fundamentally cannot provide.
+ */
+function surface(slug: string, repeat: number, _legacyBump = 0): THREE.MeshStandardMaterial {
+  const spec = matSpecs[slug] ?? { roughness: 0.9, metalness: 0.0, normalScale: 1.0 };
+
+  const mat = new THREE.MeshStandardMaterial({
+    map: tex(`${slug}_albedo`, repeat, true),
+    normalMap: tex(`${slug}_normal`, repeat, false),
+    aoMap: tex(`${slug}_ao`, repeat, false),
+    aoMapIntensity: 0.9,
+    roughness: spec.roughness,
+    metalness: spec.metalness,
   });
+  mat.normalScale = new THREE.Vector2(spec.normalScale, spec.normalScale);
+  return mat;
 }
 
 // --- the room -------------------------------------------------------------
@@ -110,7 +156,7 @@ const FILL_LIT = { hemi: 0.8, ambient: 0.18 };
 const FILL_DEEP = { hemi: 0.055, ambient: 0.02 };
 
 const floor = new THREE.Mesh(
-  new THREE.PlaneGeometry(ROOM_HALF_X * 2, ROOM_HALF_Z * 2),
+  enableAO(new THREE.PlaneGeometry(ROOM_HALF_X * 2, ROOM_HALF_Z * 2)),
   surface("steel_plate", 5, 0.18)
 );
 floor.rotation.x = -Math.PI / 2;
@@ -118,7 +164,7 @@ floor.receiveShadow = true;
 scene.add(floor);
 
 const ceiling = new THREE.Mesh(
-  new THREE.PlaneGeometry(ROOM_HALF_X * 2, ROOM_HALF_Z * 2),
+  enableAO(new THREE.PlaneGeometry(ROOM_HALF_X * 2, ROOM_HALF_Z * 2)),
   surface("concrete_rebar", 8, 0.3)
 );
 ceiling.rotation.x = Math.PI / 2;
@@ -130,7 +176,7 @@ scene.add(ceiling);
 // from a 5 m ceiling into a 2.6 m drift is the whole point: the building
 // closes on you and nobody had to say so.
 const driftFloor = new THREE.Mesh(
-  new THREE.PlaneGeometry(DRIFT_END_X - ROOM_HALF_X, DRIFT_HALF_Z * 2),
+  enableAO(new THREE.PlaneGeometry(DRIFT_END_X - ROOM_HALF_X, DRIFT_HALF_Z * 2)),
   surface("mud_silt", 6, 0.3)
 );
 driftFloor.rotation.x = -Math.PI / 2;
@@ -139,7 +185,7 @@ driftFloor.receiveShadow = true;
 scene.add(driftFloor);
 
 const driftCeil = new THREE.Mesh(
-  new THREE.PlaneGeometry(DRIFT_END_X - ROOM_HALF_X, DRIFT_HALF_Z * 2),
+  enableAO(new THREE.PlaneGeometry(DRIFT_END_X - ROOM_HALF_X, DRIFT_HALF_Z * 2)),
   surface("collapsed_timber", 6, 0.4)
 );
 driftCeil.rotation.x = Math.PI / 2;
@@ -148,7 +194,12 @@ scene.add(driftCeil);
 
 const wallMat = surface("shotcrete", 7, 0.35);
 const rockMat = surface("rock_face", 9, 0.5);
-const pillarMat = surface("copper_pipe", 2, 0.3);
+// Metal with nothing to reflect is physically black, and the pillar read as a
+// void rather than an object. Dropping metalness and lifting roughness makes it
+// behave like oxidised copper - which is a dielectric patina, not bare metal.
+const pillarMat = surface("copper_pipe", 2);
+pillarMat.metalness = 0.25;
+pillarMat.roughness = 0.78;
 const benchMat = surface("rust_sheet", 2, 0.25);
 const driftMat = surface("wet_limestone", 5, 0.55);
 const timberMat = surface("brace_timber", 1, 0.4);
@@ -171,7 +222,7 @@ for (const b of COLLIDERS) {
           ? rockMat
           : wallMat;
 
-  const mesh = new THREE.Mesh(new THREE.BoxGeometry(b.hx * 2, b.h, b.hz * 2), mat);
+  const mesh = new THREE.Mesh(enableAO(new THREE.BoxGeometry(b.hx * 2, b.h, b.hz * 2)), mat);
   mesh.position.set(b.x, b.h / 2, b.z);
   mesh.castShadow = true;
   mesh.receiveShadow = true;

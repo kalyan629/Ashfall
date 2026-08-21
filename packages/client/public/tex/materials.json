@@ -1,0 +1,182 @@
+{
+  "black_water": {
+    "metalness": 0,
+    "normalScale": 0.25,
+    "roughness": 0.08,
+    "seam": 0.955
+  },
+  "bone_accumulation": {
+    "metalness": 0,
+    "normalScale": 1.2,
+    "roughness": 0.8,
+    "seam": 0.943
+  },
+  "brace_timber": {
+    "metalness": 0,
+    "normalScale": 1.05,
+    "roughness": 0.9,
+    "seam": 0.926
+  },
+  "cable_bundles": {
+    "metalness": 0.1,
+    "normalScale": 1.3,
+    "roughness": 0.8,
+    "seam": 0.84
+  },
+  "collapsed_timber": {
+    "metalness": 0,
+    "normalScale": 1.3,
+    "roughness": 0.92,
+    "seam": 0.966
+  },
+  "concrete_rebar": {
+    "metalness": 0,
+    "normalScale": 1.1,
+    "roughness": 0.93,
+    "seam": 1.016
+  },
+  "copper_pipe": {
+    "metalness": 0.75,
+    "normalScale": 1,
+    "roughness": 0.5,
+    "seam": 0.868
+  },
+  "corroded_duct": {
+    "metalness": 0.3,
+    "normalScale": 1.2,
+    "roughness": 0.85,
+    "seam": 1.004
+  },
+  "crate_wood": {
+    "metalness": 0,
+    "normalScale": 1,
+    "roughness": 0.85,
+    "seam": 0.857
+  },
+  "custody_floor": {
+    "metalness": 0,
+    "normalScale": 0.5,
+    "roughness": 0.3,
+    "seam": 0.946
+  },
+  "custody_panel": {
+    "metalness": 0.5,
+    "normalScale": 0.6,
+    "roughness": 0.4,
+    "seam": 0.96
+  },
+  "enamel_paint": {
+    "metalness": 0.1,
+    "normalScale": 0.7,
+    "roughness": 0.45,
+    "seam": 0.996
+  },
+  "flowstone": {
+    "metalness": 0,
+    "normalScale": 1.1,
+    "roughness": 0.28,
+    "seam": 0.768
+  },
+  "fungal_bloom": {
+    "metalness": 0,
+    "normalScale": 1,
+    "roughness": 0.75,
+    "seam": 1.007
+  },
+  "mesh_grille": {
+    "metalness": 0.8,
+    "normalScale": 1.3,
+    "roughness": 0.6,
+    "seam": 0.875
+  },
+  "mineral_crust": {
+    "metalness": 0,
+    "normalScale": 1.35,
+    "roughness": 0.7,
+    "seam": 0.966
+  },
+  "mud_silt": {
+    "metalness": 0,
+    "normalScale": 0.9,
+    "roughness": 0.55,
+    "seam": 0.967
+  },
+  "ore_rail": {
+    "metalness": 0.9,
+    "normalScale": 1.2,
+    "roughness": 0.45,
+    "seam": 0.988
+  },
+  "riveted_steel": {
+    "metalness": 0.8,
+    "normalScale": 1,
+    "roughness": 0.6,
+    "seam": 0.936
+  },
+  "rock_face": {
+    "metalness": 0,
+    "normalScale": 1.45,
+    "roughness": 0.92,
+    "seam": 0.883
+  },
+  "rubber_matting": {
+    "metalness": 0,
+    "normalScale": 0.8,
+    "roughness": 0.95,
+    "seam": 0.781
+  },
+  "rust_sheet": {
+    "metalness": 0.25,
+    "normalScale": 1.15,
+    "roughness": 0.88,
+    "seam": 0.948
+  },
+  "salvage_fabric": {
+    "metalness": 0,
+    "normalScale": 0.8,
+    "roughness": 0.95,
+    "seam": 0.935
+  },
+  "sandbag": {
+    "metalness": 0,
+    "normalScale": 1.3,
+    "roughness": 0.97,
+    "seam": 0.974
+  },
+  "scrap_weld": {
+    "metalness": 0.7,
+    "normalScale": 1.25,
+    "roughness": 0.7,
+    "seam": 1.008
+  },
+  "shotcrete": {
+    "metalness": 0,
+    "normalScale": 1.2,
+    "roughness": 0.94,
+    "seam": 0.976
+  },
+  "signage_painted": {
+    "metalness": 0.3,
+    "normalScale": 0.5,
+    "roughness": 0.55,
+    "seam": 0.863
+  },
+  "steel_plate": {
+    "metalness": 0.85,
+    "normalScale": 0.9,
+    "roughness": 0.55,
+    "seam": 0.962
+  },
+  "tarpaulin": {
+    "metalness": 0,
+    "normalScale": 0.9,
+    "roughness": 0.9,
+    "seam": 0.999
+  },
+  "wet_limestone": {
+    "metalness": 0,
+    "normalScale": 1.2,
+    "roughness": 0.35,
+    "seam": 0.932
+  }
+}
