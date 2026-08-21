@@ -49,6 +49,30 @@ VAE = "madebyollin/sdxl-vae-fp16-fix"
 SIZE = 1024
 
 
+def local_snapshot(repo_id):
+    """Resolve a repo id to its on-disk snapshot directory.
+
+    We load from the directory rather than the repo id on purpose. The cached
+    SDXL snapshot is *incomplete relative to its own model_index.json* -- the
+    index declares a `vae` component but only `vae_1_0/` was ever fetched. Given
+    a repo id, diffusers runs its download step first, notices the gap, and
+    reports the whole model as uncached even though every file we actually use
+    is present. Handing it a local path skips that check entirely, and the
+    missing folder never matters because we pass our own VAE in.
+    """
+    import glob
+
+    cache = os.environ.get("HF_HUB_CACHE") or os.environ.get("HUGGINGFACE_HUB_CACHE")
+    if not cache:
+        return repo_id  # let diffusers do its normal thing
+
+    stem = "models--" + repo_id.replace("/", "--")
+    snaps = sorted(glob.glob(os.path.join(cache, stem, "snapshots", "*")))
+    if not snaps:
+        raise SystemExit(f"No cached snapshot for {repo_id} under {cache}")
+    return snaps[-1]
+
+
 def make_tileable(*modules):
     """Switch every Conv2d in the given modules to circular padding.
 
@@ -112,9 +136,13 @@ def main():
 
     torch.cuda.set_device(0)  # each process sees one GPU via CUDA_VISIBLE_DEVICES
 
-    vae = AutoencoderKL.from_pretrained(VAE, torch_dtype=torch.float16)
+    base_dir, vae_dir = local_snapshot(BASE), local_snapshot(VAE)
+    print(f"[rank {args.rank}] base={base_dir}", flush=True)
+
+    vae = AutoencoderKL.from_pretrained(vae_dir, torch_dtype=torch.float16)
     pipe = StableDiffusionXLPipeline.from_pretrained(
-        BASE, vae=vae, torch_dtype=torch.float16, variant="fp16", use_safetensors=True
+        base_dir, vae=vae, torch_dtype=torch.float16,
+        variant="fp16", use_safetensors=True,
     ).to("cuda")
     pipe.set_progress_bar_config(disable=True)
 
