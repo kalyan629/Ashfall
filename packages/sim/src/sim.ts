@@ -147,6 +147,7 @@ export function createSim(partial: Partial<SimConfig> = {}): Sim {
       memCfg: MEMORY_PRESETS[cfg.memoryMode],
       tier: 0,
       goal: null,
+      lastBeliefEvent: new Map(),
       // Per-agent RNG stream, so an agent replays identically in isolation.
       rng: makeRng(cfg.seed * 7919 + i * 104729),
       nextMemId: 1,
@@ -229,6 +230,64 @@ function buildGraph(agents: Agent[], rng: Rng, shuffle: boolean): Map<string, st
 }
 
 // ---------------------------------------------------------------------------
+// Instrumentation helpers
+// ---------------------------------------------------------------------------
+
+/**
+ * Emit a belief_updated event and remember its id against the proposition.
+ *
+ * Every belief change must go through here. The recorded id is what lets a
+ * later goal change be emitted as that belief change's causal child, which is
+ * the difference between claiming beliefs drive behaviour and being able to
+ * demonstrate it.
+ */
+function logBelief(sim: Sim, a: Agent, prop: string, before: number): void {
+  const b = a.beliefs.get(prop);
+  if (!b) return;
+  const id = sim.log.emit({
+    t: "belief_updated",
+    tick: sim.tick,
+    agent: a.identity.id,
+    prop,
+    from: before,
+    to: b.credence,
+    confidence: b.confidence,
+  });
+  a.lastBeliefEvent.set(prop, id);
+}
+
+/** Store a memory AND record it, so the memory stage is observable at all. */
+function logRemember(sim: Sim, a: Agent, m: Parameters<typeof remember>[1]): void {
+  if (a.memCfg.mode === "none") return;
+  remember(a, m);
+  sim.log.emit({
+    t: "memory_created",
+    tick: sim.tick,
+    agent: a.identity.id,
+    memory: a.nextMemId - 1,
+    kind: m.kind,
+    about: m.about,
+    importance: m.importance,
+  });
+}
+
+/** Adjust trust and record it. Previously this moved silently. */
+function logTrust(sim: Sim, a: Agent, other: string, delta: number, reason: string): void {
+  const before = trustIn(a, other);
+  const after = Math.max(-1, Math.min(1, before + delta));
+  a.trust.set(other, after);
+  sim.log.emit({
+    t: "trust_changed",
+    tick: sim.tick,
+    agent: a.identity.id,
+    other,
+    from: before,
+    to: after,
+    reason,
+  });
+}
+
+// ---------------------------------------------------------------------------
 // LOD
 // ---------------------------------------------------------------------------
 
@@ -294,7 +353,11 @@ export function step(sim: Sim): void {
       // is a real change of behaviour and was previously invisible, because
       // only the kind was compared and it stayed 'warn'.
       if (from !== to) {
-        sim.log.emit({
+        // Belief-driven goals are emitted as children of the belief change
+        // that produced them, so the audit can see the edge rather than
+        // having to take the comment's word for it.
+        const parent = candidate.prop ? (a.lastBeliefEvent.get(candidate.prop) ?? null) : null;
+        sim.log.caused(parent, () => sim.log.emit({
           t: "goal_changed",
           tick: sim.tick,
           agent: a.identity.id,
@@ -302,7 +365,7 @@ export function step(sim: Sim): void {
           to,
           utility: candidate.utility,
           reason: candidate.reason,
-        });
+        }));
       }
       a.goal = candidate;
     }
@@ -336,16 +399,7 @@ export function step(sim: Sim): void {
       sim.log.caused(obsId, () => {
         const before = a.beliefs.get(p.id)?.credence ?? 0.5;
         updateFromObservation(a, p.id, p.truth, sim.tick);
-        const after = a.beliefs.get(p.id)!;
-        sim.log.emit({
-          t: "belief_updated",
-          tick: sim.tick,
-          agent: a.identity.id,
-          prop: p.id,
-          from: before,
-          to: after.credence,
-          confidence: after.confidence,
-        });
+        logBelief(sim, a, p.id, before);
         if (a.goal?.kind === "repair" && a.goal.prop === p.id) {
           sim.log.emit({
             t: "action_completed",
@@ -356,7 +410,7 @@ export function step(sim: Sim): void {
         }
       });
 
-      remember(a, {
+      logRemember(sim, a, {
         tick: sim.tick,
         kind: "witnessed",
         about: p.id,
@@ -394,6 +448,25 @@ export function step(sim: Sim): void {
  */
 function reconcileTestimony(sim: Sim, a: Agent, propId: string, truth: boolean): void {
   const recalled = recall(a, sim.tick, { about: propId }, 8);
+  // Emit recall itself. Without this, memory USE is invisible to the audit —
+  // we could count memories created but never whether any were consulted,
+  // which is precisely the blind spot that let a stored-but-never-read memory
+  // system pass as working.
+  if (recalled.length === 0) return;
+
+  const recallId = sim.log.emit({
+    t: "memory_recalled",
+    tick: sim.tick,
+    agent: a.identity.id,
+    count: recalled.length,
+    about: propId,
+  });
+
+  // Everything the recall causes must be emitted INSIDE this scope. Without
+  // it the trust updates are siblings of the recall rather than children, and
+  // the audit correctly refuses to accept that recall changed anything —
+  // a causal claim you cannot trace is not a causal claim.
+  sim.log.caused(recallId, () => {
   for (const m of recalled) {
     if (m.kind !== "told" || m.participants.length === 0) continue;
     const teller = m.participants[0];
@@ -407,10 +480,10 @@ function reconcileTestimony(sim: Sim, a: Agent, propId: string, truth: boolean):
     const wasRight = theyClaimedTrue === truth;
     const delta = (wasRight ? 0.10 : -0.22) * vividness;
 
-    a.trust.set(teller, Math.max(-1, Math.min(1, trustIn(a, teller) + delta)));
+    logTrust(sim, a, teller, delta, wasRight ? "testimony confirmed" : "testimony contradicted");
 
     if (!wasRight) {
-      remember(a, {
+      logRemember(sim, a, {
         tick: sim.tick,
         kind: "harmed",
         about: propId,
@@ -422,6 +495,7 @@ function reconcileTestimony(sim: Sim, a: Agent, propId: string, truth: boolean):
       });
     }
   }
+  });
 }
 
 /** One agent tells a neighbour something. */
@@ -450,12 +524,8 @@ function converse(sim: Sim, speaker: Agent): void {
         const before = listener.beliefs.get(p.id)?.credence ?? 0.5;
         sim.log.caused(rid, () => {
           updateFromTestimony(listener, p.id, claim.claim, claim.confidence, speaker.identity.id, sim.tick);
-          const after = listener.beliefs.get(p.id)!;
-          sim.log.emit({
-            t: 'belief_updated', tick: sim.tick, agent: listener.identity.id,
-            prop: p.id, from: before, to: after.credence, confidence: after.confidence,
-          });
-          remember(listener, {
+          logBelief(sim, listener, p.id, before);
+          logRemember(sim, listener, {
             tick: sim.tick, kind: 'told', about: p.id,
             participants: [speaker.identity.id], where: 'level' + listener.level,
             importance: p.salience * 0.6, valence: claim.claim ? -0.2 : 0.05, confidence: 0.8,
@@ -518,19 +588,10 @@ function converse(sim: Sim, speaker: Agent): void {
   const beforeCred = listener.beliefs.get(best.id)?.credence ?? 0.5;
   sim.log.caused(rumourId, () => {
     updateFromTestimony(listener, best.id, claim.claim, claim.confidence, speaker.identity.id, sim.tick);
-    const after = listener.beliefs.get(best.id)!;
-    sim.log.emit({
-      t: 'belief_updated',
-      tick: sim.tick,
-      agent: listener.identity.id,
-      prop: best.id,
-      from: beforeCred,
-      to: after.credence,
-      confidence: after.confidence,
-    });
+    logBelief(sim, listener, best!.id, beforeCred);
   });
 
-  remember(listener, {
+  logRemember(sim, listener, {
     tick: sim.tick,
     kind: "told",
     about: best.id,
@@ -711,18 +772,10 @@ export function tell(
       after.confidence = Math.min(1, after.confidence + 0.34 * credibility * confidence);
     }
 
-    sim.log.emit({
-      t: "belief_updated",
-      tick: sim.tick,
-      agent: toId,
-      prop: propId,
-      from: before,
-      to: after.credence,
-      confidence: after.confidence,
-    });
+    logBelief(sim, a, propId, before);
 
     const prop = sim.props.find((p) => p.id === propId);
-    remember(a, {
+    logRemember(sim, a, {
       tick: sim.tick,
       kind: "told",
       about: propId,
@@ -731,16 +784,6 @@ export function tell(
       importance: (prop?.salience ?? 0.5) * 0.75,
       valence: claim ? -0.2 : 0.05,
       confidence: 0.85,
-    });
-
-    sim.log.emit({
-      t: "memory_created",
-      tick: sim.tick,
-      agent: toId,
-      memory: a.nextMemId - 1,
-      kind: "told",
-      about: propId,
-      importance: (prop?.salience ?? 0.5) * 0.75,
     });
   });
 

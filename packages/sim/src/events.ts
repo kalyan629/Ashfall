@@ -26,6 +26,7 @@ export type SimEvent =
   | { t: "information_received"; id: number; tick: number; agent: string; prop: string; claim: boolean; from: string; credibility: number; cause: number | null }
   | { t: "belief_updated"; id: number; tick: number; agent: string; prop: string; from: number; to: number; confidence: number; cause: number | null }
   | { t: "memory_created"; id: number; tick: number; agent: string; memory: number; kind: string; about: string; importance: number; cause: number | null }
+  | { t: "memory_recalled"; id: number; tick: number; agent: string; count: number; about: string; cause: number | null }
   | { t: "trust_changed"; id: number; tick: number; agent: string; other: string; from: number; to: number; reason: string; cause: number | null }
   | { t: "goal_changed"; id: number; tick: number; agent: string; from: string; to: string; utility: number; reason: string; cause: number | null }
   | { t: "rumour_transmitted"; id: number; tick: number; from: string; to: string; prop: string; claim: boolean; confidence: number; hops: number; cause: number | null }
@@ -129,6 +130,8 @@ export function describe(e: SimEvent): string {
       return `${e.agent} WAS TOLD ${e.prop}=${e.claim} by ${e.from} (credibility ${e.credibility.toFixed(2)})`;
     case "belief_updated":
       return `${e.agent} BELIEF ${e.prop} ${e.from.toFixed(2)} -> ${e.to.toFixed(2)} (conf ${e.confidence.toFixed(2)})`;
+    case "memory_recalled":
+      return `${e.agent} RECALLED ${e.count} memories about ${e.about}`;
     case "memory_created":
       return `${e.agent} REMEMBERED ${e.kind} about ${e.about} (importance ${e.importance.toFixed(2)})`;
     case "trust_changed":

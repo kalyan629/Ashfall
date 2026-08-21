@@ -133,6 +133,16 @@ export interface Agent {
   tier: 0 | 1 | 2 | 3;
   /** What this survivor is currently trying to do, and how much they want it. */
   goal: Goal | null;
+  /**
+   * Per-proposition id of the last `belief_updated` event for this agent.
+   *
+   * Exists purely so a goal driven by a belief can be emitted as a causal
+   * CHILD of the belief change that drove it. Without it the audit sees a
+   * belief update and a goal change as unrelated roots, reports the belief
+   * stage as dead, and is right to: an untraceable causal claim is not a
+   * causal claim.
+   */
+  lastBeliefEvent: Map<string, number>;
   rng: Rng;
   /** Monotonic id source for memories. */
   nextMemId: number;
