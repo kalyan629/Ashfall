@@ -233,3 +233,67 @@ total consensus, and 69,518 rumours means the topic is dominating conversation
 far beyond plausibility. The mechanism is now correct and measurable; the
 transmission rate is not yet calibrated. Next: measure spread curves against a
 target adoption fraction rather than assuming saturation is success.
+
+---
+
+## 9. E1-revised: honest source vs trusted liar — 2026-08-22
+
+864 runs, 72 seeds × 3 memory modes × 4 observation rates, population 60,
+executed across 36 cores on Kipchoge. Note the sim is CPU work; the GPUs are
+useless for it and earn their keep in the texture foundry instead.
+
+**Setup.** A LIAR begins with trust +0.75 from everyone and asserts the
+opposite of the world. An HONEST source begins at −0.25 and asserts the truth.
+Both work the room on the same schedule. Observation rate — how often an agent
+independently checks something — is swept, because the first pilot run came back
+degenerate: at a low enough rate the liar wins outright in every condition, since
+**detecting a lie requires having seen the truth**.
+
+### Trust in the liar (starts at 0.750)
+
+| observation rate | none | shortTerm | episodic |
+|---|---|---|---|
+| 0.0004 | 0.750 ±0.000 | 0.749 ±0.002 | 0.726 ±0.020 |
+| 0.002 | 0.750 ±0.000 | 0.746 ±0.005 | **0.651 ±0.036** |
+| 0.008 | 0.750 ±0.000 | 0.733 ±0.014 | **0.585 ±0.048** |
+| 0.03 | 0.750 ±0.000 | 0.694 ±0.024 | **0.529 ±0.047** |
+
+### Population belief error
+
+| observation rate | none | shortTerm | episodic |
+|---|---|---|---|
+| 0.0004 | 0.659 | 0.655 | 0.664 |
+| 0.002 | 0.595 | 0.585 | 0.587 |
+| 0.008 | 0.550 | 0.547 | 0.548 |
+| 0.03 | 0.480 | 0.480 | 0.481 |
+
+### What this actually shows
+
+**1. Memory works, and the effect is clean and ordered.** `none` never moves
+trust at all — 0.750 ±0.000 at every observation rate, because an agent with no
+episodic store cannot connect what it saw to who told it otherwise. `episodic`
+erodes trust monotonically with observation: 0.726 → 0.651 → 0.585 → 0.529.
+`shortTerm` sits between them and only engages at high observation rates, which
+is exactly what a small ring buffer should do — it forgets the lie before it
+sees the evidence.
+
+This is a dose–response curve, not a threshold effect, and it is the first
+non-null result in this project.
+
+**2. Memory DETECTS the liar but does not DEFEAT them.** Belief error is
+statistically identical across all three memory modes at every observation rate
+(0.480 / 0.480 / 0.481 at the highest). And `caught%` — the fraction of runs
+where mean trust in the liar goes negative — is **0% everywhere**.
+
+So the population learns who is lying and still believes the lies.
+
+**3. Why, mechanically.** `updateFromTestimony` weights a source by |trust|, so
+trust must cross ZERO to invert a claim rather than merely discount it. Erosion
+of 0.22 over a 2500-tick campaign never reaches that, and the liar's message
+volume outpaces the correction. Detection and resistance are different
+capabilities and this model currently has only the first.
+
+**Next**: make trust→credibility steeper near zero, or let a caught lie
+propagate as a claim about the LIAR rather than only adjusting a private trust
+edge. The second is more interesting and matches the design: reputation should
+be social, not a number each agent keeps to itself.

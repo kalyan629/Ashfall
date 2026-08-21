@@ -32,19 +32,27 @@ import {
 
 const PORT = Number(process.env.PORT ?? 8080);
 
-/** How much simulated time one player may advance per tick, in seconds.
+/**
+ * Movement budget as a TOKEN BUCKET, not a per-tick allowance.
  *
- *  This used to be a cap on the NUMBER of inputs drained (4 per tick), which is
- *  the wrong quantity to limit: it makes a client's speed depend on how often
- *  it happens to send, so a 240 fps client and a 7 fps client get different
- *  results from the same held key.
+ * A flat per-tick allowance with slack for jitter hands that slack to anyone
+ * who asks for it: an honest client claims the real elapsed time (0.05 s) while
+ * a cheater claims the full allowance (0.0625 s) every single tick. Measured,
+ * that is a permanent 1.25x speed advantage — smaller than the 2.00x it
+ * replaced, but still free speed for lying.
  *
- *  Budgeting by dt instead is both fairer and a strictly better speedhack
- *  guard -- what we actually care about is "you may not advance more than one
- *  tick of simulated time per tick of real time". The 1.25x slack absorbs
- *  network jitter and a client whose timer runs slightly fast, without letting
- *  anyone outrun the clock in a way that accumulates. */
-const MAX_DT_PER_TICK = (TICK_MS / 1000) * 1.25;
+ * A bucket fixes it properly. Tokens accrue at EXACTLY real time: one second of
+ * simulated movement per second of wall clock, no multiplier. Long-run speed is
+ * therefore exactly 1.0x for everybody, and there is nothing to gain by
+ * inflating dt.
+ *
+ * The burst cap is what still absorbs jitter: a client whose packets arrive
+ * late has banked tokens and can spend them in a catch-up burst, so honest
+ * players on bad connections are not punished. What it cannot do is let anyone
+ * outrun the clock on average, which is the only property that matters.
+ */
+const BUCKET_FILL_PER_TICK = TICK_MS / 1000;
+const BUCKET_MAX = 0.15; // ~3 ticks of banked catch-up
 
 interface Player {
   id: PlayerId;
@@ -55,6 +63,8 @@ interface Player {
   /** Last input seq applied. Echoed back so the client can reconcile. */
   ack: number;
   queue: Input[];
+  /** Seconds of simulated movement this player may still spend. */
+  budget: number;
 }
 
 const players = new Map<PlayerId, Player>();
@@ -144,6 +154,7 @@ wss.on("connection", (socket) => {
         z: spawn.z,
         ack: 0,
         queue: [],
+        budget: BUCKET_FILL_PER_TICK,
       };
       players.set(id, player);
       send(socket, { t: "welcome", id, tick });
@@ -204,14 +215,38 @@ function step(): void {
   for (const p of players.values()) {
     // Drain by simulated-time budget, not by input count. Leftover inputs stay
     // queued and are applied next tick, so a burst is delayed rather than lost.
-    let budget = MAX_DT_PER_TICK;
-    while (p.queue.length > 0 && budget > 0) {
+    // Accrue at real time, capped. Unused tokens bank for a late burst.
+    p.budget = Math.min(p.budget + BUCKET_FILL_PER_TICK, BUCKET_MAX);
+
+    while (p.queue.length > 0 && p.budget > 0) {
       const input = p.queue.shift()!;
-      applyInput(p, input); // p has {x, z}; applyInput mutates them
+
+      /**
+       * CLAMP TO THE REMAINING BUDGET *BEFORE* APPLYING.
+       *
+       * The previous version applied the whole input and only then subtracted
+       * from the budget, so the per-input clamp (0.1 s) capped ONE input but
+       * never the cumulative advance per tick. With a 0.0625 s budget, a client
+       * sending dt=0.1 every tick advanced 0.1 s of movement per 0.05 s of real
+       * time - a clean, sustained 2.00x speedhack, measured.
+       *
+       * It survived the whole suite because the existing test only checked a
+       * SINGLE oversized input. One input being clamped says nothing about the
+       * budget holding across a flood; those are different guarantees.
+       *
+       * Honest clients never reach this clamp, so their prediction still
+       * reconciles exactly. Only a client trying to outrun the clock has its
+       * inputs shortened - cheating costs accuracy, honesty costs nothing.
+       *
+       * The deeper fix is for the server to integrate from its OWN tick time
+       * and the last known direction, never trusting client dt as movement time
+       * at all. That changes the prediction contract, so it is noted rather
+       * than snuck in here.
+       */
+      const dt = Math.min(Math.max(0, input.dt), 0.1, p.budget);
+      applyInput(p, { ...input, dt }); // p has {x, z}; applyInput mutates them
       p.ack = input.seq;
-      // applyInput clamps dt to 0.1 internally; mirror that here so a client
-      // claiming a huge dt cannot drain the whole budget in one input.
-      budget -= Math.max(0, Math.min(input.dt, 0.1));
+      p.budget -= dt;
     }
   }
 

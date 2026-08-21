@@ -118,6 +118,50 @@ check(
   `moved ${Math.hypot(after.x - before.x, after.z - before.z).toFixed(3)}m on a 60s claim`
 );
 
+// --- SUSTAINED dt inflation ------------------------------------------------
+// The single-input check above only proves ONE oversized dt is clamped. It does
+// NOT prove the per-tick budget holds, and it did not: applyInput ran BEFORE
+// the budget was decremented, so an input claiming dt=0.1 advanced the full
+// 0.1 s even when only 0.0625 s of budget remained. Sustained at tick rate that
+// is exactly 2x speed - a working speedhack that passed the whole test suite.
+//
+// Two clients, same duration, same direction. One honest, one inflating dt.
+const honest = client("honest");
+const cheat = client("cheat");
+await wait(700);
+
+const h0 = self(honest), c0 = self(cheat);
+const RUN_MS = 1500;
+const runFrom = Date.now();
+while (Date.now() - runFrom < RUN_MS) {
+  honest.ws.send(JSON.stringify({ t: "input", input: { seq: ++honest.seq, dx: 1, dz: 0, dt: 0.05 } }));
+  cheat.ws.send(JSON.stringify({ t: "input", input: { seq: ++cheat.seq, dx: 1, dz: 0, dt: 0.1 } }));
+  await wait(TICK_MS);
+}
+await wait(300);
+
+const elapsed = (Date.now() - runFrom) / 1000;
+const hd = Math.abs(self(honest).x - h0.x);
+const cd = Math.abs(self(cheat).x - c0.x);
+
+// Compare against WALL CLOCK, not against the honest client.
+//
+// The honest client is a JS loop on setTimeout, which drifts: it sends about
+// 0.87 s of movement per real second, so measuring the cheater against it
+// reports a 1.23x "advantage" that is really the baseline under-claiming. The
+// only meaningful ceiling is physics: distance can never exceed elapsed real
+// time x speed, plus the one banked burst the token bucket allows.
+const PLAYER_SPEED = 4.0;
+const BUCKET_MAX = 0.15;
+const ceiling = (elapsed + BUCKET_MAX) * PLAYER_SPEED;
+check(
+  "sustained dt inflation cannot outrun the clock",
+  cd <= ceiling,
+  `inflated ${cd.toFixed(2)}m vs ${ceiling.toFixed(2)}m ceiling over ${elapsed.toFixed(2)}s (honest baseline ${hd.toFixed(2)}m)`
+);
+honest.ws.close();
+cheat.ws.close();
+
 a.ws.close();
 b.ws.close();
 
