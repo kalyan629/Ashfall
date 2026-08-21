@@ -11,14 +11,17 @@
     "./persist": "./src/persist.ts",
     "./snapshot": "./src/snapshot.ts",
     "./events": "./src/events.ts",
-    "./audit": "./src/audit.ts"
+    "./audit": "./src/audit.ts",
+    "./information": "./src/information.ts"
   },
   "scripts": {
     "exp": "tsx experiments/run.ts",
     "chain": "tsx experiments/chain.ts",
     "audit": "tsx experiments/audit.ts",
     "persist": "tsx experiments/persist.ts",
-    "restart": "tsx experiments/restart.ts"
+    "restart": "tsx experiments/restart.ts",
+    "liar": "tsx experiments/liar.ts",
+    "loop": "tsx experiments/loop.ts"
   },
   "devDependencies": {
     "tsx": "^4.19.2",

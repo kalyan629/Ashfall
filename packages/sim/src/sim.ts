@@ -19,6 +19,7 @@
 
 import { type Proposition, type Rng, clamp01, makeRng, pick } from "./core.js";
 import { EventLog } from "./events.js";
+import { ClaimLog } from "./information.js";
 import { selectGoal, shouldSwitch, type Goal } from "./goals.js";
 import {
   type Agent,
@@ -109,6 +110,8 @@ export interface Sim {
   work: { agentUpdates: number; conversations: number };
   /** Canonical causal event stream. Metrics are folds over this. */
   log: EventLog;
+  /** Every assertion ever made, for provenance traversal. */
+  claims: ClaimLog;
 }
 
 const FACTIONS = ["directorate", "cut", "grow", "works", "unaffiliated"] as const;
@@ -193,6 +196,7 @@ export function createSim(partial: Partial<SimConfig> = {}): Sim {
     graph,
     work: { agentUpdates: 0, conversations: 0 },
     log: new EventLog(cfg.logCapacity),
+    claims: new ClaimLog(),
   };
 }
 
