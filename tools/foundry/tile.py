@@ -202,7 +202,11 @@ def main():
         prompt = f"{mat['prompt']}, {zone_style[zone]}"
         # Per-material negatives exist because some slugs drift to a nearby
         # archetype -- shotcrete becomes brickwork, rock face becomes paving.
-        neg = f"{negative}, {mat['negative']}" if mat.get("negative") else negative
+        # Per-material negative FIRST. The combined string truncates at 77 like
+        # everything else, and the targeted term is the one that must survive --
+        # putting it last meant "brick, block, masonry" was the first thing cut,
+        # which is precisely the drift it exists to prevent.
+        neg = f"{mat['negative']}, {negative}" if mat.get("negative") else negative
         d = os.path.join(OUT, slug)
         os.makedirs(d, exist_ok=True)
 

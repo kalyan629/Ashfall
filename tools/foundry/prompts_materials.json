@@ -1,9 +1,9 @@
 {
   "_comment": "Tileable material prompts, derived from docs/WORLD.md section 8.3 and constrained by the rules in 8.4.",
 
-  "_token_budget": "CLIP TRUNCATES AT 77 TOKENS AND DISCARDS THE REST SILENTLY. The 2026-08-21 smoke test ran at 126 tokens, so a third of every prompt -- including the whole anti-shadow clause, which sat at the tail -- never reached the model. That is why both outputs came back with baked directional shadows. Full prompt is 'zone_style + material prompt', in that order, so the lighting instructions sit at the FRONT and survive truncation. Keep the total under 77. tile.py counts tokens and warns before generating anything.",
+  "_token_budget": "CLIP TRUNCATES AT 77 TOKENS AND DISCARDS THE REST SILENTLY. The first smoke test ran at 126 tokens, so a third of every prompt -- including the whole anti-shadow clause, which sat at the tail -- never reached the model, which is why both outputs came back with baked directional shadows. NEGATIVES TRUNCATE THE SAME WAY: per-material negatives go FIRST in the combined string, because the targeted term is the one that must survive. tile.py checks both prompt and negative and warns per-slug before generating anything.",
 
-  "_lighting_note": "A game albedo map must be flat and unlit -- the engine lights it at runtime, so painted-in shadows double up and read wrong from every angle. 'no shadows, flat even light, albedo' is load-bearing. Do not trim it.",
+  "_lighting_note": "A game albedo map must be unlit -- the engine lights it at runtime, so painted-in shadows double up and read wrong from every angle. 'diffuse even lighting, no cast shadows' is load-bearing. Do not trim it. (Do not restore the word 'flat' here; see _flat_note.)",
 
   "_palette_note": "NO PALETTE TINT IN zone_style. Second smoke test 2026-08-21 put 'amber and verdigris tint' in the shared style and it overwhelmed material identity -- the mine rock face came back as decorative turquoise stone. You tint a scene with LIGHTS, not with albedo maps: bake amber into every texture and you can never light it differently, and it all goes muddy. Albedo stays neutral; Marrow's sodium lamps do the palette work in-engine. Colour belongs only to materials that genuinely have it (copper is verdigris, rust is orange, concrete is grey).",
 
@@ -11,7 +11,7 @@
 
   "_flat_note": "NEVER use the word 'flat' in a prompt. Third smoke test 2026-08-21 used 'flat lay albedo, flat even light' meaning flat LIGHTING, and SDXL read it as flat DESIGN -- riveted steel came back as vector art in stained-glass shapes. 'Photograph' and 'diffuse even lighting' say the same thing with no second meaning.",
 
-  "shared_negative": "cast shadow, directional light, specular, glossy, ambient occlusion, 3d render, cgi, stylized, cartoon, illustration, vector, graphic design, poster, stained glass, geometric, decorative, marble, gemstone, text, watermark, border, person, perspective, clean, new",
+  "shared_negative": "cast shadow, directional light, specular, glossy, ambient occlusion, 3d render, cgi, stylized, cartoon, illustration, vector, graphic design, stained glass, geometric, text, watermark, border, person, perspective, clean, new",
 
   "zone_style": {
     "inhabited": "photograph, macro texture, diffuse even lighting, no cast shadows, top down, seamless tileable, worn, photorealistic",
