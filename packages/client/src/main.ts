@@ -29,7 +29,7 @@ const scene = new THREE.Scene();
 scene.background = new THREE.Color(COLD);
 // Fog is doing real work here: it hides the far wall, implies the room
 // continues, and is the cheapest depth cue in 3D.
-scene.fog = new THREE.FogExp2(COLD, 0.038);
+scene.fog = new THREE.FogExp2(COLD, 0.020);
 
 const camera = new THREE.PerspectiveCamera(58, innerWidth / innerHeight, 0.1, 200);
 
@@ -41,7 +41,7 @@ renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 // ACES filmic keeps the bright sodium pools from blowing out to flat white
 // and gives the falloff a filmic roll-off instead of a hard clip.
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 1.15;
+renderer.toneMappingExposure = 0.95;
 document.body.appendChild(renderer.domElement);
 
 addEventListener("resize", () => {
@@ -81,11 +81,17 @@ function surface(slug: string, repeat: number, bump = 0.25): THREE.MeshStandardM
 }
 
 // --- the room -------------------------------------------------------------
-scene.add(new THREE.AmbientLight(0x2a3540, 0.5));
+// The art direction is warm-against-cold, which needs BOTH. With only the
+// sodium lamps lit, every surface went the same orange and the scene read as
+// monochrome — the grey tread floor looked like orange brick. A dim cold fill
+// gives the sodium something to be warm *against*, and keeps shadowed areas
+// legible instead of pure black.
+scene.add(new THREE.HemisphereLight(0x35506b, 0x140f0a, 0.8));
+scene.add(new THREE.AmbientLight(0x16222e, 0.18));
 
 const floor = new THREE.Mesh(
   new THREE.PlaneGeometry(ROOM_HALF_X * 2, ROOM_HALF_Z * 2),
-  surface("steel_plate", 10, 0.18)
+  surface("steel_plate", 5, 0.18)
 );
 floor.rotation.x = -Math.PI / 2;
 floor.receiveShadow = true;
@@ -99,23 +105,24 @@ ceiling.rotation.x = Math.PI / 2;
 ceiling.position.y = 5;
 scene.add(ceiling);
 
-const wallMat = surface("shotcrete", 4, 0.35);
-const rockMat = surface("rock_face", 3, 0.5);
+const wallMat = surface("shotcrete", 7, 0.35);
+const rockMat = surface("rock_face", 9, 0.5);
 const pillarMat = surface("copper_pipe", 2, 0.3);
 const benchMat = surface("rust_sheet", 2, 0.25);
 
 // Colliders are rendered straight from the shared definition, so what you see
 // is exactly what you collide with. Art can never drift from physics.
-for (const b of COLLIDERS) {
-  const isPillar = b.hx < 2 && b.hz < 2;
-  const isBench = b.hz < 1 && b.hx > 2;
-  const h = isPillar ? 5 : isBench ? 0.8 : 5;
+const matFor = { wall: wallMat, pillar: pillarMat, bench: benchMat } as const;
 
+for (const b of COLLIDERS) {
+  // Kind and height are DECLARED on the collider, never guessed from its
+  // dimensions — see the note on BoxKind in shared/world.ts.
   const mesh = new THREE.Mesh(
-    new THREE.BoxGeometry(b.hx * 2, h, b.hz * 2),
-    isPillar ? pillarMat : isBench ? benchMat : b.hx > 10 ? rockMat : wallMat
+    new THREE.BoxGeometry(b.hx * 2, b.h, b.hz * 2),
+    // Long perimeter walls get raw rock; the short ends get shotcrete.
+    b.kind === "wall" && b.hx > 10 ? rockMat : matFor[b.kind]
   );
-  mesh.position.set(b.x, h / 2, b.z);
+  mesh.position.set(b.x, b.h / 2, b.z);
   mesh.castShadow = true;
   mesh.receiveShadow = true;
   scene.add(mesh);
@@ -133,17 +140,22 @@ interface Lamp {
 }
 
 const lamps: Lamp[] = [];
+// A 3x3 grid. Six lamps at distance 13 left most of a 40x28 room unlit — the
+// spawn point had no lamp within 11 m and the whole scene went black.
 const lampSpots: [number, number, boolean][] = [
-  [-11, -7, false],
-  [11, -7, false],
-  [-11, 7, false],
-  [11, 7, true], // this one is failing
+  [-13, -9, false],
+  [0, -9, false],
+  [13, -9, false],
+  [-13, 0, false],
   [0, 0, false],
+  [13, 0, true], // this one is failing
+  [-13, 9, false],
   [0, 9, false],
+  [13, 9, false],
 ];
 
 for (const [lx, lz, dying] of lampSpots) {
-  const light = new THREE.PointLight(SODIUM, 55, 26, 2);
+  const light = new THREE.PointLight(SODIUM, 34, 19, 2);
   light.position.set(lx, 4.4, lz);
   light.castShadow = true;
   light.shadow.mapSize.set(512, 512);
@@ -170,13 +182,13 @@ for (const [lx, lz, dying] of lampSpots) {
   cage.position.set(lx, 4.62, lz);
   scene.add(cage);
 
-  lamps.push({ light, bulb, base: 55, dying, seed: Math.random() * 100 });
+  lamps.push({ light, bulb, base: 34, dying, seed: Math.random() * 100 });
 }
 
 // --- dust -----------------------------------------------------------------
 // Motes drifting in the light. Sells "air that has been recirculated for
 // eleven years" and gives the volume something to hang depth on.
-const DUST = 900;
+const DUST = 260;
 const dustGeo = new THREE.BufferGeometry();
 const dustPos = new Float32Array(DUST * 3);
 const dustVel = new Float32Array(DUST);
@@ -191,9 +203,9 @@ const dust = new THREE.Points(
   dustGeo,
   new THREE.PointsMaterial({
     color: 0xffd9a0,
-    size: 0.035,
+    size: 0.022,
     transparent: true,
-    opacity: 0.55,
+    opacity: 0.22,
     depthWrite: false,
     blending: THREE.AdditiveBlending,
   })
@@ -309,7 +321,8 @@ function frame(now: number): void {
   walkPhase += moving ? dt * 9 : 0;
 
   // --- lamps ---
-  const humOff = !hum.running;
+  // Only an alarm once the hum has actually existed. See Hum.started.
+  const humOff = hum.started && !hum.running;
   for (const l of lamps) {
     let f = 1;
     if (l.dying) {
@@ -367,14 +380,19 @@ function frame(now: number): void {
   }
 
   // --- camera ---
-  const want = new THREE.Vector3(net.self.x, 7.2, net.self.z + 9.0);
+  // Camera height MUST stay under the ceiling (y = 5) and under the lamps
+  // (y = 4.4). The first two passes sat at 7.2 and 5.4, which put the lens
+  // above the ceiling plane — it is single-sided, so the room read as an open
+  // plane under a black sky, and the central lamp cage filled the frame.
+  // 2.6 m is roughly standing eye height and keeps the whole volume readable.
+  const want = new THREE.Vector3(net.self.x, 2.6, net.self.z + 7.0);
   // Exponential smoothing so the feel is identical at 60 and 144 fps.
   camPos.lerp(want, 1 - Math.exp(-7 * dt));
   camera.position.copy(camPos);
   // Sway, coupled to walking. Purely cosmetic and it is most of what people
   // mean when they say a game "feels good".
   camera.position.x += Math.sin(walkPhase * 0.5) * (moving ? 0.045 : 0);
-  camera.lookAt(net.self.x, 1.3, net.self.z);
+  camera.lookAt(net.self.x, 1.1, net.self.z);
 
   hud.textContent =
     `ASHFALL · MARROW · Level 2 — The Commons\n` +
@@ -382,7 +400,11 @@ function frame(now: number): void {
     `${name}\n` +
     `in the bunker (${roster.length}): ${roster.join(", ") || "—"}\n\n` +
     `WASD move · H ${hum.running ? "cut the handlers" : "restore power"}\n` +
-    (humOff ? `\n>> THE HUM HAS STOPPED. YOU ARE AUDIBLE. <<` : "");
+    (humOff
+      ? `\n>> THE HUM HAS STOPPED. YOU ARE AUDIBLE. <<`
+      : hum.started
+        ? ""
+        : `\n(press any key — the air handlers need a moment)`);
 
   renderer.render(scene, camera);
   requestAnimationFrame(frame);

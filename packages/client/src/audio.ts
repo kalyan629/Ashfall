@@ -23,6 +23,12 @@ export class Hum {
 
   running = false;
 
+  /** Has audio ever been initialised? Distinct from `running`: before the first
+   *  keypress WebAudio cannot start at all, so `running` is false without the
+   *  hum having ever existed. Treating that as "the hum stopped" showed the
+   *  YOU ARE AUDIBLE alarm on page load, which is exactly backwards. */
+  started = false;
+
   /** WebAudio cannot start before a user gesture, so this is called on the
    *  first keypress rather than at load. */
   start(): void {
@@ -96,6 +102,7 @@ export class Hum {
     // is simply there, which is how you stop noticing it.
     master.gain.linearRampToValueAtTime(0.22, ctx.currentTime + 4);
     this.running = true;
+    this.started = true;
   }
 
   /**
@@ -138,6 +145,7 @@ export class Hum {
     this.master.gain.cancelScheduledValues(t);
     this.master.gain.linearRampToValueAtTime(0.22, t + 3.0);
     this.running = true;
+    this.started = true;
   }
 
   toggle(): void {

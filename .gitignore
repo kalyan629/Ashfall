@@ -14,3 +14,4 @@ coverage/
 # generated art (large) - regenerate on Kipchoge
 assets/generated/
 *.ktx2
+.playwright-out/

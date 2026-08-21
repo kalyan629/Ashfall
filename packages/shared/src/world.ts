@@ -19,6 +19,15 @@
 
 import { PLAYER_RADIUS, PLAYER_SPEED, type Input } from "./protocol.js";
 
+/** What a collider IS, declared rather than guessed.
+ *
+ *  The renderer used to infer this from dimensions (`hz < 1 && hx > 2` meant
+ *  bench). The perimeter walls are hx:20, hz:0.5 — which matches that test —
+ *  so both long walls rendered 0.8 m tall and the room had skirting boards
+ *  instead of walls. Collision was unaffected, so no test caught it; it was
+ *  only visible on screen. Never infer a thing's role from its measurements. */
+export type BoxKind = "wall" | "pillar" | "bench";
+
 export interface Box {
   /** Centre. */
   x: number;
@@ -26,6 +35,9 @@ export interface Box {
   /** Half-extents. */
   hx: number;
   hz: number;
+  kind: BoxKind;
+  /** Height in metres. Collision is 2D, so this is purely for rendering. */
+  h: number;
 }
 
 export interface Vec2 {
@@ -41,20 +53,22 @@ export interface Vec2 {
 export const ROOM_HALF_X = 20;
 export const ROOM_HALF_Z = 14;
 
+export const ROOM_HEIGHT = 5;
+
 export const COLLIDERS: Box[] = [
   // Perimeter walls, 1 m thick, sitting just inside the room bounds.
-  { x: 0, z: -ROOM_HALF_Z, hx: ROOM_HALF_X, hz: 0.5 },
-  { x: 0, z: ROOM_HALF_Z, hx: ROOM_HALF_X, hz: 0.5 },
-  { x: -ROOM_HALF_X, z: 0, hx: 0.5, hz: ROOM_HALF_Z },
-  { x: ROOM_HALF_X, z: 0, hx: 0.5, hz: ROOM_HALF_Z },
+  { x: 0, z: -ROOM_HALF_Z, hx: ROOM_HALF_X, hz: 0.5, kind: "wall", h: ROOM_HEIGHT },
+  { x: 0, z: ROOM_HALF_Z, hx: ROOM_HALF_X, hz: 0.5, kind: "wall", h: ROOM_HEIGHT },
+  { x: -ROOM_HALF_X, z: 0, hx: 0.5, hz: ROOM_HALF_Z, kind: "wall", h: ROOM_HEIGHT },
+  { x: ROOM_HALF_X, z: 0, hx: 0.5, hz: ROOM_HALF_Z, kind: "wall", h: ROOM_HEIGHT },
 
-  // A support pillar. Mines are full of them and they make good cover.
-  { x: -6, z: -3, hx: 1.2, hz: 1.2 },
-  { x: 7, z: 4, hx: 1.2, hz: 1.2 },
+  // Support pillars. Mines are full of them and they make good cover.
+  { x: -6, z: -3, hx: 1.2, hz: 1.2, kind: "pillar", h: ROOM_HEIGHT },
+  { x: 7, z: 4, hx: 1.2, hz: 1.2, kind: "pillar", h: ROOM_HEIGHT },
 
   // Canteen benches -- the reason people gather here.
-  { x: 0, z: 6, hx: 5, hz: 0.6 },
-  { x: 0, z: 8.5, hx: 5, hz: 0.6 },
+  { x: 0, z: 6, hx: 5, hz: 0.6, kind: "bench", h: 0.8 },
+  { x: 0, z: 8.5, hx: 5, hz: 0.6, kind: "bench", h: 0.8 },
 ];
 
 /** Push a circle out of a box along whichever axis it overlaps least. */
