@@ -1,0 +1,47 @@
+{
+  "_comment": "Tileable material prompts, derived directly from docs/WORLD.md section 8.3 and constrained by the rules in 8.4. Keep prompts SHORT -- CLIP truncates at 77 tokens, and every token spent on scene description is a token not spent on the material itself. Zone drives the palette: 'inhabited' is warm/saturated, 'deep' is cold/desaturated, 'custody' is flat institutional and machine-printed.",
+
+  "shared_negative": "person, people, character, furniture, room, scene, perspective, vanishing point, horizon, text, watermark, signature, border, frame, vignette, glowing screen, neon, chrome, retrofuturism, 1950s, clean, new, pristine",
+
+  "zone_style": {
+    "inhabited": "top-down flat lay, evenly lit, sodium amber tint, verdigris and rust accents, worn but maintained, patched and repaired, seamless tileable texture, PBR albedo",
+    "deep": "top-down flat lay, evenly lit, cold desaturated grey, wet, mineral, unmaintained, seamless tileable texture, PBR albedo",
+    "custody": "top-down flat lay, evenly lit, flat institutional grey-green, machine printed, uniform, cold, seamless tileable texture, PBR albedo"
+  },
+
+  "materials": [
+    { "slug": "shotcrete",        "zone": "inhabited", "prompt": "sprayed shotcrete wall, rough sagging trowel texture, hairline cracks" },
+    { "slug": "rock_face",        "zone": "inhabited", "prompt": "raw drilled rock face, drill hole scars, copper zinc ore veining" },
+    { "slug": "steel_plate",      "zone": "inhabited", "prompt": "galvanised steel floor plate, diamond tread, scuffed worn edges" },
+    { "slug": "riveted_steel",    "zone": "inhabited", "prompt": "riveted steel panel, rows of rivets, chipped enamel paint" },
+    { "slug": "copper_pipe",      "zone": "inhabited", "prompt": "bundled oxidised copper pipework, verdigris patina, brass fittings" },
+    { "slug": "rust_sheet",       "zone": "inhabited", "prompt": "corroded steel sheet, heavy orange rust bloom, flaking layers" },
+    { "slug": "rubber_matting",   "zone": "inhabited", "prompt": "worn black rubber floor matting, ribbed, cracked, ground-in dirt" },
+    { "slug": "cable_bundles",    "zone": "inhabited", "prompt": "dense bundled electrical cable run, zip ties, hand-written tags" },
+    { "slug": "tarpaulin",        "zone": "inhabited", "prompt": "canvas tarpaulin, grommets, patched tears, dust-stained folds" },
+    { "slug": "salvage_fabric",   "zone": "inhabited", "prompt": "salvaged domestic fabric patchwork, mismatched faded colours, stitched" },
+    { "slug": "enamel_paint",     "zone": "inhabited", "prompt": "chipped enamel painted metal, layers of mismatched repaint, rust bleed" },
+    { "slug": "concrete_rebar",   "zone": "inhabited", "prompt": "concrete wall with rebar rust bleed stains, spalling, damp patches" },
+    { "slug": "sandbag",          "zone": "inhabited", "prompt": "stacked hessian sandbags, dusty, sagging, frayed seams" },
+    { "slug": "crate_wood",       "zone": "inhabited", "prompt": "rough wooden crate planks, stencilled markings, split grain" },
+    { "slug": "ore_rail",         "zone": "inhabited", "prompt": "narrow gauge ore rail on timber sleepers, ballast, polished rail heads" },
+    { "slug": "signage_painted",  "zone": "inhabited", "prompt": "hand-painted stencil signage on metal, hazard yellow, drips, overpainted" },
+
+    { "slug": "wet_limestone",    "zone": "deep", "prompt": "wet limestone cave wall, water sheen, mineral staining" },
+    { "slug": "flowstone",        "zone": "deep", "prompt": "flowstone calcite formation, rippled draperies, wet translucent" },
+    { "slug": "mineral_crust",    "zone": "deep", "prompt": "pale mineral crust encrustation, crystalline, brittle nodules" },
+    { "slug": "black_water",      "zone": "deep", "prompt": "still black water surface, faint oily sheen, silt suspended" },
+    { "slug": "mud_silt",         "zone": "deep", "prompt": "wet grey silt mud, drying cracks, boot prints, standing water" },
+    { "slug": "collapsed_timber", "zone": "deep", "prompt": "collapsed rotten mine timber props, splintered, black mould" },
+    { "slug": "corroded_duct",    "zone": "deep", "prompt": "corroded ventilation ductwork, perforated by rust, sagging seams" },
+    { "slug": "fungal_bloom",     "zone": "deep", "prompt": "pale fungal bloom on wet stone, threadlike, faint bioluminescence" },
+    { "slug": "bone_accumulation","zone": "deep", "prompt": "scattered animal bone accumulation in silt, gnawed, partly buried" },
+
+    { "slug": "scrap_weld",       "zone": "inhabited", "prompt": "improvised scrap plate barricade, crude weld beads, mismatched metal" },
+    { "slug": "mesh_grille",      "zone": "inhabited", "prompt": "welded steel mesh grille, bent wires, rust at joints" },
+    { "slug": "brace_timber",     "zone": "inhabited", "prompt": "rough braced timber shoring, bolted plates, saw marks" },
+
+    { "slug": "custody_panel",    "zone": "custody", "prompt": "institutional grey green painted steel panel, stencilled serial number" },
+    { "slug": "custody_floor",    "zone": "custody", "prompt": "polished institutional concrete floor, painted lane markings, clean" }
+  ]
+}
