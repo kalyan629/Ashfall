@@ -30,12 +30,19 @@ import {
 
 const PORT = Number(process.env.PORT ?? 8080);
 
-/** Cap on inputs drained per player per tick.
+/** How much simulated time one player may advance per tick, in seconds.
  *
- *  Without this a client can flood inputs and move faster than everyone else
- *  simply by sending more of them -- the classic speedhack. 4 per tick at 20 Hz
- *  tolerates a 240 fps client and a bit of network burstiness, and nothing more. */
-const MAX_INPUTS_PER_TICK = 4;
+ *  This used to be a cap on the NUMBER of inputs drained (4 per tick), which is
+ *  the wrong quantity to limit: it makes a client's speed depend on how often
+ *  it happens to send, so a 240 fps client and a 7 fps client get different
+ *  results from the same held key.
+ *
+ *  Budgeting by dt instead is both fairer and a strictly better speedhack
+ *  guard -- what we actually care about is "you may not advance more than one
+ *  tick of simulated time per tick of real time". The 1.25x slack absorbs
+ *  network jitter and a client whose timer runs slightly fast, without letting
+ *  anyone outrun the clock in a way that accumulates. */
+const MAX_DT_PER_TICK = (TICK_MS / 1000) * 1.25;
 
 interface Player {
   id: PlayerId;
@@ -138,10 +145,16 @@ function step(): void {
   tick++;
 
   for (const p of players.values()) {
-    const batch = p.queue.splice(0, MAX_INPUTS_PER_TICK);
-    for (const input of batch) {
+    // Drain by simulated-time budget, not by input count. Leftover inputs stay
+    // queued and are applied next tick, so a burst is delayed rather than lost.
+    let budget = MAX_DT_PER_TICK;
+    while (p.queue.length > 0 && budget > 0) {
+      const input = p.queue.shift()!;
       applyInput(p, input); // p has {x, z}; applyInput mutates them
       p.ack = input.seq;
+      // applyInput clamps dt to 0.1 internally; mirror that here so a client
+      // claiming a huge dt cannot drain the whole budget in one input.
+      budget -= Math.max(0, Math.min(input.dt, 0.1));
     }
   }
 

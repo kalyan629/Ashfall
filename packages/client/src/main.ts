@@ -22,6 +22,7 @@ import {
 } from "@ashfall/shared";
 import { Net } from "./net.js";
 import { Hum } from "./audio.js";
+import { Roost } from "./drift.js";
 
 const SODIUM = 0xffa23d;
 const COLD = 0x0d1116;
@@ -288,6 +289,19 @@ scene.add(headlamp.target);
  *  the beam does not snap back to north every time you stop walking. */
 const facing = new THREE.Vector2(0, -1);
 
+// --- the roost -------------------------------------------------------------
+// Hanging from the drift ceiling, deeper in than the player first expects.
+// Placed by hand rather than scattered: the first one you find should be at
+// the edge of the headlamp cone, not on top of you.
+const roost = new Roost(scene, [
+  [27.5, DRIFT_HEIGHT - 0.12, -0.9],
+  [31.0, DRIFT_HEIGHT - 0.10, 0.8],
+  [36.5, DRIFT_HEIGHT - 0.14, -0.5],
+  [40.0, DRIFT_HEIGHT - 0.11, 1.0],
+  [43.5, DRIFT_HEIGHT - 0.12, -0.8],
+]);
+const playerPos = new THREE.Vector3();
+
 // --- avatars --------------------------------------------------------------
 const avatarGeo = new THREE.CapsuleGeometry(PLAYER_RADIUS, 1.0, 4, 12);
 
@@ -381,6 +395,34 @@ const hud = document.getElementById("hud")!;
 let roster: string[] = [];
 net.onRoster = (n) => (roster = n);
 
+// --- input sampling -------------------------------------------------------
+/**
+ * Input is sampled on a FIXED 30 Hz timer, not once per rendered frame.
+ *
+ * Tying the two together makes movement frame-rate dependent, which was
+ * measurably broken: at 7 fps each frame covered ~143 ms, but both client and
+ * server clamp a single input's dt to 100 ms as an anti-speedhack guard, so a
+ * third of every frame's movement was silently discarded. Measured 1.93 m/s
+ * against a PLAYER_SPEED of 4.0 — a player on a slow machine moved at half
+ * the speed of one on a fast machine.
+ *
+ * The clamp is not the bug and must stay; sampling at render rate is the bug.
+ * A timer keeps firing at 30 Hz regardless of how slowly the GPU is going, so
+ * every client now covers real time at the same rate.
+ */
+const INPUT_HZ = 30;
+let inputLast = performance.now();
+
+setInterval(() => {
+  const now = performance.now();
+  const idt = Math.min((now - inputLast) / 1000, 0.1);
+  inputLast = now;
+  const { dx, dz } = intent();
+  // Sent every tick including idle ones: a gap in the sequence is
+  // indistinguishable from a dropped packet on the server side.
+  net.sendInput(dx, dz, idt);
+}, 1000 / INPUT_HZ);
+
 // --- loop -----------------------------------------------------------------
 let last = performance.now();
 let walkPhase = 0;
@@ -392,8 +434,6 @@ function frame(now: number): void {
   const t = now / 1000;
 
   const { dx, dz } = intent();
-  net.sendInput(dx, dz, dt);
-
   const moving = dx !== 0 || dz !== 0;
   walkPhase += moving ? dt * 9 : 0;
   if (moving) facing.set(dx, dz);
@@ -429,6 +469,14 @@ function frame(now: number): void {
   const wantFog = inDeep ? 0.085 : 0.02;
   (scene.fog as THREE.FogExp2).density +=
     (wantFog - (scene.fog as THREE.FogExp2).density) * k;
+
+  // --- the roost ---
+  // The hum is what masks you. While the handlers run, the drone covers your
+  // footsteps and the roost sleeps; cut it and you are the loudest thing in
+  // the tunnel. `started` matters here too — before the first keypress there
+  // is no hum, but there is also no player making noise yet.
+  playerPos.set(net.self.x, 1.0, net.self.z);
+  roost.update(dt, t, playerPos, hum.started && !hum.running);
 
   // --- lamps ---
   // Only an alarm once the hum has actually existed. See Hum.started.
@@ -531,6 +579,9 @@ function frame(now: number): void {
     `in the bunker (${roster.length}): ${roster.join(", ") || "—"}\n\n` +
     `headlamp  [${lampOn ? "ON " : "off"}]  ${lampLabel}\n` +
     `WASD move · F headlamp · H ${hum.running ? "cut the handlers" : "restore power"}\n` +
+    (roost.alert !== null
+      ? `\n>> SOMETHING IS AWAKE. ${roost.alert.toFixed(0)} m. <<\n`
+      : "") +
     (inDeep && !lampLive ? `\n>> YOU CANNOT SEE. <<\n` : "") +
     (lampCharge > 0 && lampCharge < 20 && lampLive ? `\n>> the lamp is going. <<\n` : "") +
     (humOff
@@ -542,5 +593,13 @@ function frame(now: number): void {
   renderer.render(scene, camera);
   requestAnimationFrame(frame);
 }
+
+// Debug hook. Driving the game from Playwright is blind without it — twice
+// now I have guessed wrong about why the player stopped moving.
+(window as unknown as Record<string, unknown>).__dbg = {
+  pos: () => ({ x: net.self.x, z: net.self.z }),
+  held: () => [...held],
+  zone: () => (net.self.x > DEEP_BOUNDARY_X ? "deep" : "commons"),
+};
 
 requestAnimationFrame(frame);
