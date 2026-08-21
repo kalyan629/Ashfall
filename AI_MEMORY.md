@@ -9,6 +9,7 @@
 
 - 2026-08-21 — Project started. Scope, stack, and location decided. Repo scaffolded.
 - 2026-08-21 (later) — Design redirect: the bunker IS the open world. Wards replace the injector. Fauna, Directorate, holding ground added. Roadmap re-ordered.
+- 2026-08-21 (end of day 1) — Phase 4 complete (30 materials, 8.6x packed). Playwright+Blender MCP live. Four visual-only bugs found. Phase 5 started: the drift, headlamp, darkness.
 
 ---
 
@@ -91,3 +92,51 @@ ward hunt shipping incrementally.
 **Phase 4 not started yet** - deliberately gated on this redirect. The art
 direction changed materially (Custody reads printed, everyone else hand-made;
 deep-level palette added), which is exactly why the smoke-test gate existed.
+
+## 2026-08-21 (end of day 1) — Phase 4 complete, Phase 5 started
+
+**Phase 4 DONE.** Full run finished: 90 images, 30 materials, 4 ranks in
+2211/2159/1984/1835 s (round-robin balanced well). Added `pack.py`: picks the
+lowest-seam variant per material and converts to WebP. 59.1 MB PNG to 6.8 MB
+WebP, 8.6x. **Zero materials exceeded the 1.08 seam threshold** - best
+flowstone 0.768, worst concrete_rebar 1.016. The circular-padding conv trick
+worked across the whole set.
+
+**Playwright + Blender MCP connected.** Both configured globally in
+`~/.claude.json`, because a project-scoped `.mcp.json` is only read from the
+folder Claude Code has open - which was the research workspace, not this repo.
+That was the whole reason the first attempt "wasn't detecting".
+
+**Four bugs found within ten minutes of being able to SEE the game.** All four
+passed typecheck and all seven netcode tests:
+1. The room had no long walls - the renderer inferred "bench" from
+   `hz < 1 && hx > 2`, which matches the perimeter walls, so they rendered
+   0.8 m tall. Collision reads COLLIDERS directly and was unaffected, which is
+   exactly why no test caught it.
+2. The hum alarm fired on page load, because `running` starts false before
+   WebAudio can init.
+3. The camera sat above the single-sided ceiling plane.
+4. Sodium-only lighting went monochrome; grey tread floor read as orange brick.
+
+Diagnosed #1 by setting `scene.background` to magenta and re-screenshotting -
+the band turned magenta, proving absent geometry rather than an unlit wall.
+
+**Phase 5 started.** The drift east: a 2.6 m tunnel off the Commons through a
+doorway gap in the east wall. Headlamp with a 240 s charge that browns out and
+flickers below 20 s. Global fill and fog ease between lit and deep zones -
+legitimate as a per-viewer effect since each client renders only its own camera.
+No fauna yet.
+
+**Big lesson: change `shared/world.ts` and the SERVER MUST RESTART.** Vite
+hot-reloads the client, but the server imports the shared package at boot. The
+symptom was walking into a visibly-open doorway and being blocked at exactly
+19.10 - the old wall's contact position. This is the cost of the shared-
+simulation design and it will recur.
+
+**Local Python is no longer blocked.** Retested all four cases the research
+CLAUDE.md says fail; `uv venv`, `uv run`, direct `.venv/Scripts/python.exe`
+and `uv pip install numpy` all work. Only the bare `python` PATH stub (a
+Microsoft Store alias) still fails, and that was never an interpreter.
+
+**PROJECT_MAP.md reconciled with reality** - it had drifted to claiming Phase 0
+was not started and there was no git remote, both false.

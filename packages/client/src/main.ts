@@ -10,7 +10,16 @@
  */
 
 import * as THREE from "three";
-import { COLLIDERS, PLAYER_RADIUS, ROOM_HALF_X, ROOM_HALF_Z } from "@ashfall/shared";
+import {
+  COLLIDERS,
+  DEEP_BOUNDARY_X,
+  DRIFT_END_X,
+  DRIFT_HALF_Z,
+  DRIFT_HEIGHT,
+  PLAYER_RADIUS,
+  ROOM_HALF_X,
+  ROOM_HALF_Z,
+} from "@ashfall/shared";
 import { Net } from "./net.js";
 import { Hum } from "./audio.js";
 
@@ -54,7 +63,7 @@ addEventListener("resize", () => {
 const loader = new THREE.TextureLoader();
 
 function tex(slug: string, repeat: number): THREE.Texture {
-  const t = loader.load(`/tex/${slug}.png`);
+  const t = loader.load(`/tex/${slug}.webp`);
   t.wrapS = t.wrapT = THREE.RepeatWrapping;
   t.repeat.set(repeat, repeat);
   t.colorSpace = THREE.SRGBColorSpace;
@@ -86,8 +95,18 @@ function surface(slug: string, repeat: number, bump = 0.25): THREE.MeshStandardM
 // monochrome — the grey tread floor looked like orange brick. A dim cold fill
 // gives the sodium something to be warm *against*, and keeps shadowed areas
 // legible instead of pure black.
-scene.add(new THREE.HemisphereLight(0x35506b, 0x140f0a, 0.8));
-scene.add(new THREE.AmbientLight(0x16222e, 0.18));
+const hemi = new THREE.HemisphereLight(0x35506b, 0x140f0a, 0.8);
+const ambient = new THREE.AmbientLight(0x16222e, 0.18);
+scene.add(hemi, ambient);
+
+/** Global fill in the lit levels vs. in the deep.
+ *
+ *  Dimming a *global* light by player position is legitimate here because each
+ *  client renders only its own camera — this is a per-viewer effect, not a
+ *  change to the world. Without it the drift would be lit exactly like the
+ *  Commons and the headlamp would be decoration rather than a lifeline. */
+const FILL_LIT = { hemi: 0.8, ambient: 0.18 };
+const FILL_DEEP = { hemi: 0.055, ambient: 0.02 };
 
 const floor = new THREE.Mesh(
   new THREE.PlaneGeometry(ROOM_HALF_X * 2, ROOM_HALF_Z * 2),
@@ -105,23 +124,53 @@ ceiling.rotation.x = Math.PI / 2;
 ceiling.position.y = 5;
 scene.add(ceiling);
 
+// --- the drift east, toward the deep ---------------------------------------
+// Its own floor and ceiling because it is lower than the Commons. Stepping
+// from a 5 m ceiling into a 2.6 m drift is the whole point: the building
+// closes on you and nobody had to say so.
+const driftFloor = new THREE.Mesh(
+  new THREE.PlaneGeometry(DRIFT_END_X - ROOM_HALF_X, DRIFT_HALF_Z * 2),
+  surface("mud_silt", 6, 0.3)
+);
+driftFloor.rotation.x = -Math.PI / 2;
+driftFloor.position.set((ROOM_HALF_X + DRIFT_END_X) / 2, 0.002, 0);
+driftFloor.receiveShadow = true;
+scene.add(driftFloor);
+
+const driftCeil = new THREE.Mesh(
+  new THREE.PlaneGeometry(DRIFT_END_X - ROOM_HALF_X, DRIFT_HALF_Z * 2),
+  surface("collapsed_timber", 6, 0.4)
+);
+driftCeil.rotation.x = Math.PI / 2;
+driftCeil.position.set((ROOM_HALF_X + DRIFT_END_X) / 2, DRIFT_HEIGHT, 0);
+scene.add(driftCeil);
+
 const wallMat = surface("shotcrete", 7, 0.35);
 const rockMat = surface("rock_face", 9, 0.5);
 const pillarMat = surface("copper_pipe", 2, 0.3);
 const benchMat = surface("rust_sheet", 2, 0.25);
+const driftMat = surface("wet_limestone", 5, 0.55);
+const timberMat = surface("brace_timber", 1, 0.4);
 
 // Colliders are rendered straight from the shared definition, so what you see
 // is exactly what you collide with. Art can never drift from physics.
-const matFor = { wall: wallMat, pillar: pillarMat, bench: benchMat } as const;
-
 for (const b of COLLIDERS) {
   // Kind and height are DECLARED on the collider, never guessed from its
   // dimensions — see the note on BoxKind in shared/world.ts.
-  const mesh = new THREE.Mesh(
-    new THREE.BoxGeometry(b.hx * 2, b.h, b.hz * 2),
-    // Long perimeter walls get raw rock; the short ends get shotcrete.
-    b.kind === "wall" && b.hx > 10 ? rockMat : matFor[b.kind]
-  );
+  const deep = b.x > DEEP_BOUNDARY_X;
+  const mat = deep
+    ? b.kind === "pillar"
+      ? timberMat // shoring, not copper pipe: nobody plumbed the drift
+      : driftMat
+    : b.kind === "pillar"
+      ? pillarMat
+      : b.kind === "bench"
+        ? benchMat
+        : b.hx > 10
+          ? rockMat
+          : wallMat;
+
+  const mesh = new THREE.Mesh(new THREE.BoxGeometry(b.hx * 2, b.h, b.hz * 2), mat);
   mesh.position.set(b.x, b.h / 2, b.z);
   mesh.castShadow = true;
   mesh.receiveShadow = true;
@@ -212,6 +261,33 @@ const dust = new THREE.Points(
 );
 scene.add(dust);
 
+// --- the headlamp ----------------------------------------------------------
+/**
+ * Light is a resource, not a setting (docs/WORLD.md 7.4).
+ *
+ * The lamp burns a finite charge, so every minute spent in the drift costs
+ * something you cannot make down there. It is also deliberately narrow: a wide
+ * comfortable flood would remove the entire tension of not being able to see
+ * sideways. You get a cone, and the cone is where your attention is.
+ *
+ * Later this becomes a Drift problem too — light attracts things — but the
+ * scarcity has to exist before the predator can mean anything.
+ */
+const LAMP_FULL = 240; // seconds of charge
+let lampCharge = LAMP_FULL;
+let lampOn = false;
+
+const headlamp = new THREE.SpotLight(0xfff2d8, 0, 26, Math.PI / 7, 0.45, 1.6);
+headlamp.castShadow = true;
+headlamp.shadow.mapSize.set(1024, 1024);
+headlamp.shadow.bias = -0.004;
+scene.add(headlamp);
+scene.add(headlamp.target);
+
+/** Which way the player is facing. Movement direction, held through idle so
+ *  the beam does not snap back to north every time you stop walking. */
+const facing = new THREE.Vector2(0, -1);
+
 // --- avatars --------------------------------------------------------------
 const avatarGeo = new THREE.CapsuleGeometry(PLAYER_RADIUS, 1.0, 4, 12);
 
@@ -279,6 +355,7 @@ addEventListener("keydown", (e) => {
   const k = e.key.toLowerCase();
   hum.start(); // WebAudio needs a gesture; the first keypress is it
   if (k === "h") hum.toggle();
+  if (k === "f") lampOn = !lampOn;
   held.add(k);
 });
 addEventListener("keyup", (e) => held.delete(e.key.toLowerCase()));
@@ -319,6 +396,39 @@ function frame(now: number): void {
 
   const moving = dx !== 0 || dz !== 0;
   walkPhase += moving ? dt * 9 : 0;
+  if (moving) facing.set(dx, dz);
+
+  // --- headlamp ---
+  // Drains only while lit. When it dies it stays dead — there is no recharge
+  // in the drift, which is the point of going back for supplies.
+  if (lampOn && lampCharge > 0) lampCharge = Math.max(0, lampCharge - dt);
+  const lampLive = lampOn && lampCharge > 0;
+
+  // The last 20 seconds browns out and flickers, so the player is warned
+  // before they are blind rather than after.
+  const dying = lampCharge < 20 ? 0.25 + Math.random() * 0.55 : 1;
+  headlamp.intensity = lampLive ? 42 * dying : 0;
+  headlamp.position.set(net.self.x, 1.55, net.self.z);
+  headlamp.target.position.set(
+    net.self.x + facing.x * 10,
+    0.9,
+    net.self.z + facing.y * 10
+  );
+  headlamp.target.updateMatrixWorld();
+
+  const inDeep = net.self.x > DEEP_BOUNDARY_X;
+
+  // Ease the fill between zones rather than snapping. Crossing the threshold
+  // should feel like the light falling away behind you, which takes about a
+  // second — a hard cut just reads as a bug.
+  const wantFill = inDeep ? FILL_DEEP : FILL_LIT;
+  const k = 1 - Math.exp(-1.8 * dt);
+  hemi.intensity += (wantFill.hemi - hemi.intensity) * k;
+  ambient.intensity += (wantFill.ambient - ambient.intensity) * k;
+  // Air in the drift is wet and full of rock dust; the beam should die sooner.
+  const wantFog = inDeep ? 0.085 : 0.02;
+  (scene.fog as THREE.FogExp2).density +=
+    (wantFog - (scene.fog as THREE.FogExp2).density) * k;
 
   // --- lamps ---
   // Only an alarm once the hum has actually existed. See Hum.started.
@@ -385,21 +495,44 @@ function frame(now: number): void {
   // above the ceiling plane — it is single-sided, so the room read as an open
   // plane under a black sky, and the central lamp cage filled the frame.
   // 2.6 m is roughly standing eye height and keeps the whole volume readable.
-  const want = new THREE.Vector3(net.self.x, 2.6, net.self.z + 7.0);
+  // In the drift the ceiling drops to 2.6 m, so the Commons framing would put
+  // the lens inside the rock. Duck under it and pull in close — which also
+  // makes the drift feel tight, so the constraint and the mood agree.
+  // The drift is 4 m wide and 2.6 m high, so the camera has to stay ON the
+  // tunnel axis — an offset that works in a 40 m room puts the lens inside
+  // solid rock in here. Sit behind the player along the drift and clamp to
+  // the centreline.
+  const want = inDeep
+    ? new THREE.Vector3(
+        net.self.x - 5.5,
+        1.7,
+        THREE.MathUtils.clamp(net.self.z, -1.0, 1.0)
+      )
+    : new THREE.Vector3(net.self.x, 2.6, net.self.z + 7.0);
   // Exponential smoothing so the feel is identical at 60 and 144 fps.
   camPos.lerp(want, 1 - Math.exp(-7 * dt));
   camera.position.copy(camPos);
   // Sway, coupled to walking. Purely cosmetic and it is most of what people
   // mean when they say a game "feels good".
   camera.position.x += Math.sin(walkPhase * 0.5) * (moving ? 0.045 : 0);
-  camera.lookAt(net.self.x, 1.1, net.self.z);
+  // In the drift, look PAST the player down the tunnel rather than at them —
+  // what matters in the dark is what is ahead, not the back of your own head.
+  if (inDeep) camera.lookAt(net.self.x + 6, 1.2, net.self.z);
+  else camera.lookAt(net.self.x, 1.1, net.self.z);
+
+  const mins = Math.floor(lampCharge / 60);
+  const secs = String(Math.floor(lampCharge % 60)).padStart(2, "0");
+  const lampLabel = lampCharge <= 0 ? "DEAD" : `${mins}:${secs}`;
 
   hud.textContent =
-    `ASHFALL · MARROW · Level 2 — The Commons\n` +
+    `ASHFALL · MARROW · ${inDeep ? "the drift east — unlit" : "Level 2 — The Commons"}\n` +
     `Year Eleven\n\n` +
     `${name}\n` +
     `in the bunker (${roster.length}): ${roster.join(", ") || "—"}\n\n` +
-    `WASD move · H ${hum.running ? "cut the handlers" : "restore power"}\n` +
+    `headlamp  [${lampOn ? "ON " : "off"}]  ${lampLabel}\n` +
+    `WASD move · F headlamp · H ${hum.running ? "cut the handlers" : "restore power"}\n` +
+    (inDeep && !lampLive ? `\n>> YOU CANNOT SEE. <<\n` : "") +
+    (lampCharge > 0 && lampCharge < 20 && lampLive ? `\n>> the lamp is going. <<\n` : "") +
     (humOff
       ? `\n>> THE HUM HAS STOPPED. YOU ARE AUDIBLE. <<`
       : hum.started

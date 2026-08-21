@@ -1,0 +1,152 @@
+{
+  "black_water": {
+    "bytes": 202676,
+    "seam": 0.955,
+    "variant": "black_water_v0_seam0.955.png"
+  },
+  "bone_accumulation": {
+    "bytes": 208690,
+    "seam": 0.943,
+    "variant": "bone_accumulation_v1_seam0.943.png"
+  },
+  "brace_timber": {
+    "bytes": 157168,
+    "seam": 0.926,
+    "variant": "brace_timber_v1_seam0.926.png"
+  },
+  "cable_bundles": {
+    "bytes": 129046,
+    "seam": 0.84,
+    "variant": "cable_bundles_v2_seam0.84.png"
+  },
+  "collapsed_timber": {
+    "bytes": 266902,
+    "seam": 0.966,
+    "variant": "collapsed_timber_v0_seam0.966.png"
+  },
+  "concrete_rebar": {
+    "bytes": 309636,
+    "seam": 1.016,
+    "variant": "concrete_rebar_v2_seam1.016.png"
+  },
+  "copper_pipe": {
+    "bytes": 201626,
+    "seam": 0.868,
+    "variant": "copper_pipe_v1_seam0.868.png"
+  },
+  "corroded_duct": {
+    "bytes": 267614,
+    "seam": 1.004,
+    "variant": "corroded_duct_v2_seam1.004.png"
+  },
+  "crate_wood": {
+    "bytes": 177772,
+    "seam": 0.857,
+    "variant": "crate_wood_v1_seam0.857.png"
+  },
+  "custody_floor": {
+    "bytes": 152182,
+    "seam": 0.946,
+    "variant": "custody_floor_v2_seam0.946.png"
+  },
+  "custody_panel": {
+    "bytes": 84438,
+    "seam": 0.96,
+    "variant": "custody_panel_v2_seam0.96.png"
+  },
+  "enamel_paint": {
+    "bytes": 295914,
+    "seam": 0.996,
+    "variant": "enamel_paint_v1_seam0.996.png"
+  },
+  "flowstone": {
+    "bytes": 252364,
+    "seam": 0.768,
+    "variant": "flowstone_v2_seam0.768.png"
+  },
+  "fungal_bloom": {
+    "bytes": 237048,
+    "seam": 1.007,
+    "variant": "fungal_bloom_v1_seam1.007.png"
+  },
+  "mesh_grille": {
+    "bytes": 180814,
+    "seam": 0.875,
+    "variant": "mesh_grille_v2_seam0.875.png"
+  },
+  "mineral_crust": {
+    "bytes": 279040,
+    "seam": 0.966,
+    "variant": "mineral_crust_v1_seam0.966.png"
+  },
+  "mud_silt": {
+    "bytes": 212978,
+    "seam": 0.967,
+    "variant": "mud_silt_v2_seam0.967.png"
+  },
+  "ore_rail": {
+    "bytes": 261266,
+    "seam": 0.988,
+    "variant": "ore_rail_v0_seam0.988.png"
+  },
+  "riveted_steel": {
+    "bytes": 227486,
+    "seam": 0.936,
+    "variant": "riveted_steel_v1_seam0.936.png"
+  },
+  "rock_face": {
+    "bytes": 254124,
+    "seam": 0.883,
+    "variant": "rock_face_v1_seam0.883.png"
+  },
+  "rubber_matting": {
+    "bytes": 232382,
+    "seam": 0.781,
+    "variant": "rubber_matting_v0_seam0.781.png"
+  },
+  "rust_sheet": {
+    "bytes": 279264,
+    "seam": 0.948,
+    "variant": "rust_sheet_v0_seam0.948.png"
+  },
+  "salvage_fabric": {
+    "bytes": 289128,
+    "seam": 0.935,
+    "variant": "salvage_fabric_v0_seam0.935.png"
+  },
+  "sandbag": {
+    "bytes": 282148,
+    "seam": 0.974,
+    "variant": "sandbag_v0_seam0.974.png"
+  },
+  "scrap_weld": {
+    "bytes": 225868,
+    "seam": 1.008,
+    "variant": "scrap_weld_v2_seam1.008.png"
+  },
+  "shotcrete": {
+    "bytes": 226408,
+    "seam": 0.976,
+    "variant": "shotcrete_v1_seam0.976.png"
+  },
+  "signage_painted": {
+    "bytes": 203136,
+    "seam": 0.863,
+    "variant": "signage_painted_v0_seam0.863.png"
+  },
+  "steel_plate": {
+    "bytes": 249334,
+    "seam": 0.962,
+    "variant": "steel_plate_v0_seam0.962.png"
+  },
+  "tarpaulin": {
+    "bytes": 276850,
+    "seam": 0.999,
+    "variant": "tarpaulin_v1_seam0.999.png"
+  },
+  "wet_limestone": {
+    "bytes": 216554,
+    "seam": 0.932,
+    "variant": "wet_limestone_v1_seam0.932.png"
+  }
+}

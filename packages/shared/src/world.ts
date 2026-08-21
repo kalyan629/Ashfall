@@ -55,12 +55,29 @@ export const ROOM_HALF_Z = 14;
 
 export const ROOM_HEIGHT = 5;
 
+/** The drift running east out of the Commons, toward the deep.
+ *
+ *  Low and narrow on purpose. After the 5 m ceiling of the Commons, a 2.6 m
+ *  drift should feel like the building is closing on you — that transition is
+ *  free atmosphere and it costs two numbers. */
+export const DRIFT_HEIGHT = 2.6;
+export const DRIFT_HALF_Z = 2;
+export const DRIFT_END_X = 46;
+
+/** Where the lit world stops. East of this the lamps do not reach and the only
+ *  light is the one you brought. Used by the client to decide zone. */
+export const DEEP_BOUNDARY_X = ROOM_HALF_X;
+
 export const COLLIDERS: Box[] = [
-  // Perimeter walls, 1 m thick, sitting just inside the room bounds.
+  // --- The Commons --------------------------------------------------------
   { x: 0, z: -ROOM_HALF_Z, hx: ROOM_HALF_X, hz: 0.5, kind: "wall", h: ROOM_HEIGHT },
   { x: 0, z: ROOM_HALF_Z, hx: ROOM_HALF_X, hz: 0.5, kind: "wall", h: ROOM_HEIGHT },
   { x: -ROOM_HALF_X, z: 0, hx: 0.5, hz: ROOM_HALF_Z, kind: "wall", h: ROOM_HEIGHT },
-  { x: ROOM_HALF_X, z: 0, hx: 0.5, hz: ROOM_HALF_Z, kind: "wall", h: ROOM_HEIGHT },
+
+  // East wall, split around a doorway at z = -2..2. The gap IS the drift
+  // mouth: no door object, just an absence, which is how mine workings read.
+  { x: ROOM_HALF_X, z: -8, hx: 0.5, hz: 6, kind: "wall", h: ROOM_HEIGHT },
+  { x: ROOM_HALF_X, z: 8, hx: 0.5, hz: 6, kind: "wall", h: ROOM_HEIGHT },
 
   // Support pillars. Mines are full of them and they make good cover.
   { x: -6, z: -3, hx: 1.2, hz: 1.2, kind: "pillar", h: ROOM_HEIGHT },
@@ -69,6 +86,15 @@ export const COLLIDERS: Box[] = [
   // Canteen benches -- the reason people gather here.
   { x: 0, z: 6, hx: 5, hz: 0.6, kind: "bench", h: 0.8 },
   { x: 0, z: 8.5, hx: 5, hz: 0.6, kind: "bench", h: 0.8 },
+
+  // --- The drift east ------------------------------------------------------
+  { x: 33, z: -DRIFT_HALF_Z - 0.5, hx: 13, hz: 0.5, kind: "wall", h: DRIFT_HEIGHT },
+  { x: 33, z: DRIFT_HALF_Z + 0.5, hx: 13, hz: 0.5, kind: "wall", h: DRIFT_HEIGHT },
+  { x: DRIFT_END_X, z: 0, hx: 0.5, hz: DRIFT_HALF_Z + 1, kind: "wall", h: DRIFT_HEIGHT },
+
+  // Timber shoring part-way down. Something to squeeze past in the dark.
+  { x: 30, z: -1.2, hx: 0.4, hz: 0.8, kind: "pillar", h: DRIFT_HEIGHT },
+  { x: 38, z: 1.2, hx: 0.4, hz: 0.8, kind: "pillar", h: DRIFT_HEIGHT },
 ];
 
 /** Push a circle out of a box along whichever axis it overlaps least. */
