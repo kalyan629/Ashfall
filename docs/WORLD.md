@@ -1,185 +1,271 @@
 # ASHFALL — World Bible
 
-> The source of truth for story, tone, and **art direction**.
-> Phase 4 asset generation reads its prompts from this document. If a material,
-> colour, or silhouette is not described here, it does not get generated.
+> The source of truth for story, tone, systems, and **art direction**.
+> Phase 4 asset generation reads its prompts from §8. If a material, colour, or
+> silhouette is not described here, it does not get generated.
 
-Draft 1 · 2026-08-21
+Draft 2 · 2026-08-21 · *supersedes Draft 1 (surface-centric)*
 
 ---
 
-## 1. The premise in one paragraph
+## 1. The premise
 
-Ash has been falling for eleven years. It has never stopped. The sky is a flat
-white lid, the sun is a smudge, and the temperature has dropped enough that
-nothing grows outside. Humanity is believed to be finished. Below ground,
-several million people are still very much alive, sealed inside converted mines,
-rail tunnels and hydro works, running the machines that keep them breathing.
-Nobody knows what is making the ash. Almost nobody has been up to check.
+Ash has been falling for eleven years and has never stopped. Humanity is
+believed finished. Below ground, millions are alive inside **Marrow** and
+shelters like it — sixty kilometres of converted mine workings and natural
+cavern, nine levels deep, ninety thousand people, sealed behind a gate nobody
+can open.
+
+**The bunker is the world.** Not a hub, not a safe room — the entire game space.
+It is enormous, only partly mapped, partly powered, and parts of it are not
+empty. Players live here, work here, build here, and fight for space here.
+
+The gate opens eventually. What is beyond it is not this game's problem yet.
 
 ## 2. What everyone believes vs. what is true
 
-Players start knowing the first column. The game's long arc moves them down it.
-
-| Layer | What is believed | What is actually true |
+| Layer | Believed | True |
 |---|---|---|
-| **Surface** | A supervolcano or an impact. An act of nature. | There is no crater and no caldera. Nobody has ever found the source. |
-| **Timing** | The shelters were an emergency improvisation. | Conversion work on the shelters began **three years before** the ash. Someone knew. |
-| **The ash** | Pulverised rock. Inert. Just cold and heavy. | It is manufactured. Under a microscope it has structure — engineered particulate, not fragments. |
-| **The cause** | An accident, or God, or nothing. | A stratospheric aerosol programme, run at planetary scale to stop runaway warming. It worked. It did not stop. |
-| **The reason it continues** | It is weather. Weather does what it wants. | The injector platforms are autonomous, solar, self-repairing, and still flying. Nobody left alive knows how to give them an order. |
+| **The event** | A supervolcano. An act of nature. | No crater, no caldera, no source anyone ever found. |
+| **The timing** | The shelters were emergency improvisation. | Conversion began **three years before** the ash. Someone knew. |
+| **The ash** | Pulverised rock. Inert. | Manufactured. Engineered particulate, not fragments. |
+| **The cause** | An accident, or God, or nothing. | A stratospheric aerosol programme run to stop runaway warming. It worked. |
+| **Why it continues** | It is weather. | The injector platforms are autonomous, solar, self-repairing, still flying. Nobody left knows how to give them an order. |
+| **Why the animals changed and we did not** | Nobody asks. It is just how things are. | **The aerosol was engineered human-safe.** Deliberately. Every other vertebrate was outside its tolerance. |
 
-**The endgame of the entire game** — years out, and deliberately visible from
-day one as a rumour — is to reach an injector and shut it down. It is a raid
-target, not a cutscene. It should take a whole shelter's population to do.
+That last row is the spine of the horror. Somebody sat in a room and specified
+which species the intervention would spare.
 
-This matters for tone: **the apocalypse is not supernatural and not vengeful.
-It is a maintenance problem that outlived its maintainers.** Humanity tried to
-save itself, succeeded, and could not find the off switch. That is sadder and
-more interesting than a monster.
+## 3. The Gate, and the seven wards
 
-## 3. The shelters
+Marrow's main doors — **the Headworks Gate** — are sealed under
+**threshold control**. The original engineers split authority so no single
+person, and no single administration, could ever open it alone.
 
-Shelters are **not** purpose-built utopian vaults. They are converted deep
-infrastructure, and that single decision drives everything visual:
+- **Seven wards exist. Five must be physically present at the gate, at the same
+  time, to cycle it.** Five different people, five different keys, one moment.
+- The wards were dispersed into the deep workings before the seal. Their
+  locations were deliberately not written down in one place.
+- **The Directorate does not want them found.** An open gate ends its reason
+  to exist.
 
-| Type | Was | Reads as |
+This is *k*-of-*n* secret sharing expressed as level design. It matters for
+three reasons: no player can ever solo the endgame, the final act is inherently
+a social event, and betrayal is structurally possible — a keyholder can simply
+not turn up.
+
+### 3.1 Difficulty philosophy — read this before tuning anything
+
+The design intent is that **most players never finish the ward hunt, and that
+this is fine.** The wards are the horizon, not the content. The content is
+living in Marrow.
+
+The failure mode to avoid: *impossible* feels like being cheated, while
+*distant* feels like awe. The difference is entirely whether progress is
+**visible and public**:
+
+- Each ward found is a **server-wide event**. The sector it unlocks stays
+  unlocked for everyone, forever. The Directorate visibly reacts — patrols
+  increase, prices move, notices go up.
+- A ward is a multi-week achievement for an organised group, not a lucky drop.
+- Standing in a sector that somebody else's crew opened last month, and knowing
+  who did it, is the point.
+
+Ward challenges ship incrementally. Wards 1–2 at launch; the rest arrive as
+updates. The hunt should stay unfinished for a long time on purpose.
+
+## 4. Marrow
+
+Formerly Marrow Deep, a copper-zinc mine. The Directorate expanded it into a
+city. Nine levels, roughly sixty kilometres of workings, ~90,000 people.
+Powered by a geothermal tap on Level 7 that is one failure away from taking the
+whole place dark.
+
+| Level | Name | Character |
 |---|---|---|
-| **Deep mine** | copper, zinc, salt | raw rock face, shotcrete, ore rail, cage lifts, warm mineral colour |
-| **Rail tunnel** | metro / freight | tiled walls, platform edges, catenary, long sightlines, tight cross-section |
-| **Hydro works** | dam interior | vast concrete voids, turbine halls, water everywhere, deafening |
-| **Accelerator ring** | physics lab | circular, clinical, cable trays, clean-room remnants gone feral |
-| **Salt cavern** | gas storage | white walls, no rot, dry air, disorienting, no straight lines |
+| 0 | **Headworks** | The Gate. Sealed. Custody's fortress. Ritualised, forbidden. |
+| 1 | **The Landing** | Arrivals, registry, the noticeboard. Where new players spawn. |
+| 2 | **The Commons** | Market, canteens, bunks. Loud, warm, crowded. Marrow's heart. |
+| 3 | **The Works** | Air, water, power. Four people truly understand it. |
+| 4 | **Grow** | Hydroponics under sodium and magenta. The only vivid colour. Guarded. |
+| 5 | **The Cut** | Workshops, salvage sorting, active mining. Where players work. |
+| 6 | **The Warrens** | Derelict. Half-powered. **Claimable.** Where players build. |
+| 7 | **The Tap** | Geothermal. Hot, deafening, lethal, essential. |
+| 8 | **The Sumps** | Flooded, unmapped, unlit. Where the wards are. Where the fauna live. |
 
-Every shelter looks different because it *was* different. This is worldbuilding
-and it is also a content strategy: five distinct material palettes, generated
-once, reused forever.
+Rule of thumb: **the deeper you go, the more valuable and the more likely to
+kill you.** Levels 1–5 are civilisation. 6 is frontier. 7–8 are the game.
 
-### Our first shelter: MARROW
+## 5. The Directorate
 
-Formerly **Marrow Deep**, a copper-zinc mine. Six working levels, 400 m down,
-plus sumps below that nobody goes into. Population ~1,100.
+Marrow is governed, and not gently.
 
-Chosen for the first build because:
+- **The Directorate** administers everything: scrip, rations, tenancy, filters,
+  the registry. Bureaucratic rather than theatrical. It is not cartoonishly
+  evil — it kept ninety thousand people alive for eleven years and it will
+  remind you of that.
+- **Custody** is its security arm. Custodians are armoured, numerous, and
+  legally entitled to almost anything. They are not a raid boss; they are
+  *weather*. You do not beat Custody, you avoid Custody.
+- **The tension that drives the whole economy:** the Directorate needs the deep
+  sectors scavenged, so it employs players to go down. It also cannot allow the
+  wards to be found. **Your employer is your antagonist**, and both of you know it.
 
-- Copper oxide gives a **verdigris green** and **rust orange** palette that is
-  instantly distinct from the blue-grey every post-apocalyptic game defaults to.
-- Mines already have the vertical structure a game level wants: a main shaft
-  (hub), levels (zones), drifts (corridors), stopes (rooms).
-- Cage lifts are natural loading boundaries and natural social choke points.
-  Everyone waits for the lift. Everyone talks at the lift.
+### 5.1 Scrip and the shops
 
-**Marrow's geography, top to bottom:**
+Currency is **scrip**, denominated in **hours** — backed by certified filter
+media, the one thing in Marrow with non-negotiable value. "That'll run you eight
+hundred hours."
 
-- **Headworks** — sealed. The airlock. The only way up. Guarded, ritualised.
-- **Level 1 · The Landing** — arrivals, quarantine, the noticeboard. Where
-  new players spawn and where the shelter's news physically lives.
-- **Level 2 · The Commons** — canteen, bunks, the only large open volume.
-  This is the social heart. It is loud, warm, and crowded.
-- **Level 3 · The Works** — air handling, water reclaim, power. The machines
-  that everyone depends on and four people understand.
-- **Level 4 · Grow** — hydroponics under sodium light. The single most
-  colour-saturated place in the game. Green is precious.
-- **Level 5 · The Cut** — active mining, salvage sorting, workshops.
-- **Level 6 · The Sumps** — flooded, dark, off-limits, and therefore where
-  the interesting things are.
+Shops in the Commons sell everything: tools, weapons, lights, filters,
+fortification materials, medicine. The Directorate sets prices and takes a cut
+of every transaction. Player-to-player trade exists and is technically illegal.
 
-## 4. What players actually do
+Scrip sinks, so the economy does not inflate into nonsense: tenancy rent,
+filter replacement, repair costs, respawn fees, Custody fines, bribes.
 
-The loop is **maintenance under scarcity, together.**
+## 6. The fauna
 
-- **The shelter has needs, not the player.** Air scrubbers foul. The water
-  reclaim clogs. Power browns out. These are shelter-wide and they degrade in
-  real time whether you are logged in or not. One player cannot hold it alone.
-- **Roles emerge from competence, not a class menu.** Whoever keeps fixing the
-  scrubbers becomes the scrubber person. The game never assigns this.
-- **Surface expeditions are the risk economy.** You go up for salvage the
-  shelter cannot make: filters, seals, medicine, lithium. Going up is dangerous,
-  cold, and quiet. Coming back is the best feeling in the game.
-- **Cooperation is structural, not moral.** The airlock takes two people to
-  cycle. The lift needs someone at the winch. Design the *objects* so that
-  people need people.
+The ash spared humans by design. Nothing else.
 
-## 5. The surface
+Marrow's lower workings broke into natural cave systems that were never properly
+sealed, and ash-bearing groundwater has been seeping in for eleven years. The
+things down there were bats, rats, cave fauna, and the Directorate's own escaped
+livestock. They are none of those things now.
 
-Deliberately **not** a monster playground. The horror is absence.
+Each has one distinct silhouette and one behavioural hook. Four is enough to
+launch; more later.
 
-- No sun, no shadows — light is flat, diffuse, and comes from everywhere.
-- No sound except wind and your own breathing apparatus.
-- Ash lies metres deep. It drifts. It hides everything and it hides holes.
-- Buildings are shapes under ash, not ruins with detail. You navigate by
-  silhouette.
-- Cold is the antagonist. Filters clog on a timer. The suit is a countdown.
-- **What lives up there** is a late reveal and it is not zombies. Things adapted.
-  They are rare, they are not evil, and the first time you see one it should be
-  from very far away and it should be *walking away from you*.
+| Name | From | Hook |
+|---|---|---|
+| **Drift** | bats | Ceiling-dwelling. Hunts by sound. The ventilation hum masks you — **when the hum stops, you are audible.** |
+| **Choir** | rats | Never alone, ever. Coordinated. Floods a corridor from both ends. |
+| **Sow** | grow-level livestock | Enormous, armoured, territorial. **Breaks fortifications.** The reason bases need real walls. |
+| **The Long** | unknown, cave-native | Level 8 only. Rare. Never clearly seen. Does not always attack. |
 
-## 6. Art direction — the part Phase 4 consumes
+Design rule: these are **animals, not monsters**. They are hungry, territorial,
+and afraid of light and fire. They can be avoided, deterred, and understood.
+Nothing in Marrow hates you. That is scarier.
 
-### 6.1 The core contrast
+## 7. What players actually do
 
-The entire visual identity is one idea:
+### 7.1 The loop
 
-> **Underground is warm, saturated, cluttered, human.
-> The surface is pale, flat, silent, empty.**
+**Work → equip → go deeper → hold ground → go deeper still.**
 
-Every asset must push one way or the other. Nothing sits in the middle.
+1. **Work.** Take Directorate contracts on Levels 5–6. Earn scrip.
+2. **Equip.** Buy light, air, tools, weapons, walls from the Commons.
+3. **Descend.** Levels 6→8. Value and lethality rise together.
+4. **Hold.** Claim a derelict sector in the Warrens. Fortify it. Defend it.
+5. **Hunt.** Eventually, the wards.
 
-### 6.2 Palette
+### 7.2 Holding ground — the adrenaline
+
+This is the emotional core, and it is where the game gets its teeth.
+
+- Derelict sectors in the Warrens are **claimable**. Clear it, power it,
+  fortify it, and it is yours and your crew's.
+- **Sows break walls.** Choir floods corridors. A base that is not maintained
+  does not survive. Defence is real work, not decoration.
+- **The tenancy choice, which should be genuinely hard:**
+  - **Registered** — pay rent to the Directorate. Custody will not raid you.
+    But they know exactly where you live, and they can revoke it.
+  - **Squatted** — free, hidden, unregistered. Nobody protects you, and if
+    Custody finds you they take everything.
+
+### 7.3 Cooperation is structural, not moral
+
+Design *objects* so that people need people. The airlock between sectors takes
+two to cycle. The cage lift needs someone at the winch. Heavy salvage is a
+two-person carry. And five people must stand at the Gate together.
+
+Never ask players to be nice. Build doors that need two hands.
+
+### 7.4 Exploration must feel real
+
+His words, and the retention mechanic. What that means concretely:
+
+- **No minimap and no quest arrow.** You navigate by landmark, painted signage,
+  and memory. Maps are *items* — bought, drawn, traded, and often wrong.
+- **Darkness is a real resource.** Light is finite and light attracts things.
+- **The world is hand-authored where it counts.** Procedural generation fills
+  the deep workings; every named place is built by hand.
+- **Silence and scale.** Long walks with nothing happening are not dead time —
+  they are what makes the encounters land.
+
+## 8. Art direction — the part Phase 4 consumes
+
+### 8.1 The core contrast
+
+> **The inhabited levels are warm, saturated, cluttered, human.
+> The deep is cold, desaturated, vast, and silent.**
+
+Every asset pushes one way. Nothing sits in the middle.
+
+### 8.2 Palette
 
 | Role | Colour | Notes |
 |---|---|---|
-| Underground base | cold grey-blue concrete / shotcrete | the canvas |
-| Underground key light | **sodium amber** | warm pools, harsh falloff, the colour of safety |
-| Underground accent | **verdigris green** (copper oxide) | Marrow's signature; used on pipework and old fittings |
-| Underground accent | **rust orange** | oxidised steel, ore stain |
-| Grow level | intense magenta-pink grow light + saturated leaf green | the only vivid colour in the game; should feel almost sacred |
-| Surface | near-white sky, pale grey ash, desaturated everything | almost monochrome; any colour up here reads as important |
+| Base | cold grey-blue shotcrete and concrete | the canvas |
+| Key light, inhabited | **sodium amber** | warm pools, harsh falloff, the colour of safety |
+| Signature accent | **verdigris green** (copper oxide) | Marrow's identity; pipework, old fittings |
+| Accent | **rust orange** | oxidised steel, ore stain |
+| Grow level | magenta grow-light + saturated leaf green | the only vivid colour; should feel sacred |
+| The deep (6–8) | near-black, wet grey, pale mineral white | your own light is the only light |
+| Directorate / Custody | **flat institutional grey-green**, stencilled numbers | uniform, printed, cold — the opposite of everything hand-made |
 | Warning / UI | hazard yellow, hand-painted stencil | never neon, never glowing |
 
-### 6.3 Materials to generate (tileable)
+**Custody reads as printed. Everyone else reads as hand-made.** That single
+contrast does the political worldbuilding without a word of dialogue.
 
-Underground: shotcrete, raw drilled rock face, galvanised steel plate, riveted
+### 8.3 Materials to generate (tileable)
+
+Inhabited: shotcrete, raw drilled rock face, galvanised steel plate, riveted
 steel, oxidised copper pipe, rust sheet, worn rubber matting, cable bundles,
 tarpaulin, salvaged domestic fabric, chipped enamel paint, concrete with rebar
-bleed, sandbag, wooden crate, ore rail and sleeper.
+bleed, sandbag, wooden crate, ore rail and sleeper, hand-painted signage.
 
-Surface: deep ash drift, ash over asphalt, ash-caked brick, frosted glass,
-snow-ash crust, buried vehicle panel.
+Deep: wet limestone, flowstone, mineral crust, black water, mud, collapsed
+timber, corroded ductwork, fungal bloom, bone accumulation.
 
-### 6.4 Rules that keep it from looking generic
+Fortification: scrap plate welds, mesh, salvaged door, brace timber, spikes.
+
+### 8.4 Rules that keep it from looking generic
 
 - **No retrofuturism.** No 1950s Americana, no chrome, no jumpsuits, no
-  Vault-Tec pastiche. This is 2020s civil infrastructure gone eleven years
-  without a parts supplier.
-- **No glowing screens as set dressing.** Power is scarce. A lit screen is an
-  event.
-- **Everything is repaired, not ruined.** The shelter is *maintained*. Look for
-  patches, welds, mismatched paint, zip ties, hand-lettered labels. Ruin
-  belongs on the surface only.
-- **Hand-lettering everywhere.** Signage is painted by people, not printed.
-  This single detail sells "inhabited" harder than any amount of grime.
+  Vault-Tec pastiche. This is 2020s civil infrastructure eleven years without a
+  parts supplier.
+- **No glowing screens as set dressing.** Power is scarce. A lit screen is an event.
+- **Inhabited levels are repaired, not ruined** — patches, welds, mismatched
+  paint, zip ties, hand-lettered labels. Ruin belongs below Level 6.
+- **Hand-lettering everywhere.** Signage is painted by people. This sells
+  "inhabited" harder than any amount of grime.
 - **Nothing is symmetrical.** It was a mine. It was never designed for this.
 
-### 6.5 Audio direction (recorded here so it does not get invented later)
+### 8.5 Audio direction
 
-Constant low ventilation hum — and the moment it *stops* is the scariest sound
-in the game. Water dripping. Distant machinery. Voices carrying down drifts
-from rooms you cannot see. On the surface: nothing but wind and breathing.
+The ventilation hum is constant — **and it is a game mechanic**: it masks your
+sound from Drift. When it stops, you are audible, and that is the scariest sound
+in the game. Water. Distant machinery. Voices carrying down drifts from rooms
+you cannot see. In the deep: your own breathing, and something moving that is
+not you.
 
-## 7. Names and language
+## 9. Names and language
 
-- Shelters are named for what they were: **Marrow**, **Kestrel**, **Longwater**,
-  **The Ring**, **Halite**.
-- Surface trips are **runs**. People who do them are **runners**.
-- The ash is just "the ash". Never "the Ashfall", never capitalised in dialogue.
-  People do not use dramatic names for the weather they live in.
-- The day it started is **Year Zero**. Current year is **Eleven**.
+- Surface trips do not exist yet. Deep trips are **descents**. People who do
+  them are **divers**.
+- The ash is just "the ash" — never "the Ashfall", never capitalised in
+  dialogue. People do not use dramatic names for weather they live in.
+- Year Zero was the first ashfall. It is currently **Year Eleven**.
+- Money is **hours**. Authority is **the Directorate**. Police are **Custody**.
+- The keys are **wards**. The doors are **the Gate**.
 
-## 8. Open questions
+## 10. Open questions
 
-- Does Marrow know other shelters exist? *(Proposed: yes, by radio, badly, and
-  not all of them answer any more.)*
-- Is death permanent? *(Proposed: not for the player, but a failed run costs the
-  shelter real resources — the punishment is social, not personal.)*
-- What is in the Sumps?
+- Do other shelters exist and can Marrow reach them? *(Proposed: radio contact,
+  degrading, and not all of them still answer.)*
+- Is player death permanent? *(Proposed: no — but you drop everything carried,
+  and recovery is a run in itself. Punishment is loss and social, not deletion.)*
+- Can players join Custody? *(Proposed: yes, eventually. A player faction with
+  real power over other players is the strongest endgame content there is.)*
+- What is the Long?

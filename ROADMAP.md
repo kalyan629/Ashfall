@@ -13,12 +13,24 @@ A true OASIS-scale world is roughly 100 person-years of work. This project does
 not attempt that. It keeps the **soul** of the idea and cuts the surface area:
 
 - **Not**: an infinite planet with millions of concurrent players.
-- **Instead**: *one* persistent bunker where real players genuinely coexist —
-  walk around, see each other, talk, build, trade, share power and water — plus
-  dangerous expeditions to a procedurally generated surface above it.
+- **Instead**: **the bunker *is* the open world.** Marrow — sixty kilometres of
+  converted mine workings, nine levels deep, only partly mapped and partly
+  powered. Players live, work, trade, build, and fight for space inside it.
 
-The architecture that runs 1 bunker of 50 players is the *same* architecture
-that runs 10,000 bunkers. Scaling is adding shards, not rewriting.
+**Why this scoping is the right one** (decided 2026-08-21, Kalyan's call):
+
+- An enormous *interior* is far more tractable than open terrain. Occlusion
+  culling actually works, streaming actually works, and it runs on modest
+  hardware. Open terrain is where solo projects die.
+- The surface becomes an **expansion**, not a launch requirement. The Gate opens
+  later. The mystery survives intact because nobody has been out.
+- Vertical level structure (0–8) gives natural zones, natural difficulty
+  gradient, and natural loading boundaries for free.
+
+The architecture that runs 1 shelter of 50 players is the *same* architecture
+that runs 10,000 shelters. Scaling is adding shards, not rewriting.
+
+See **[docs/WORLD.md](docs/WORLD.md)** for story, systems, and art direction.
 
 ## 2. Why this is buildable by one data engineer
 
@@ -96,37 +108,56 @@ snapshot interpolation, input buffering.
 **Concepts:** event sourcing, hot state vs cold state, idempotent writes,
 crash-safe snapshotting, replay-on-restart.
 
-### Phase 3 — Survival loop · ~2 months
+### Phase 3 — Economy and the Directorate · ~2 months
 
-**Ships:** hunger, thirst, power, water. Shared bunker resources that players
-maintain together. Crafting. Jobs.
-**Concepts:** game economy design, server-side validation, anti-cheat, rate limiting.
+**Ships:** scrip (denominated in hours), shops in the Commons, Directorate
+contracts, filters and light as consumables, Custody presence on the inhabited
+levels.
+**Concepts:** game economy design, currency sinks, server-side validation of
+every transaction, anti-cheat, rate limiting.
 
 ### Phase 4 — Asset foundry · ~2 weeks, runs in parallel
 
 Reuse the existing `interior/` diffusion pipeline on Kipchoge's 4× 1080 Ti.
+Every model needed is already on disk — nothing to download.
 
-**Ships:** tileable PBR textures, prop concept sheets, skyboxes, UI art.
-**Concepts:** diffusion → PBR maps, seamless tiling, texture atlasing, KTX2/basis
-compression, draw-call budgeting.
+**Ships:** tileable materials from WORLD.md §8.3, depth-ControlNet concept art
+generated from grey blockout renders, creature concept sheets, signage.
+**Concepts:** diffusion → PBR maps, seamless tiling via circular-padding convs,
+texture atlasing, KTX2/basis compression, draw-call budgeting.
 
-### Phase 5 — The Surface · ~2–3 months
+### Phase 5 — The deep and the fauna · ~2–3 months
 
-**Ships:** the airlock opens. Procedurally generated ruins, weather, hazards,
-loot runs with real risk.
-**Concepts:** seeded deterministic procgen, noise fields, chunk streaming, LOD,
-frustum/occlusion culling.
+**Ships:** Levels 6–8. Darkness as a real resource. Drift, Choir, Sow. The
+ventilation hum as a stealth mechanic. Descents with real loss on death.
+**Concepts:** AI perception models (sound/light), navmesh, pathfinding, spatial
+audio, procedural generation of the deep workings, LOD and occlusion culling.
 
-### Phase 6 — Scale · ~2 months
+### Phase 6 — Holding ground · ~2 months
 
-**Ships:** many bunkers, 50+ concurrent players, load tests that prove it.
-**Concepts:** interest management (area-of-interest + spatial hashing), delta
-compression, sharding, backpressure, observability.
+**Ships:** claimable derelict sectors in the Warrens. Fortification that Sows
+can break. The registered-vs-squatted tenancy choice. Crew ownership.
+**Concepts:** persistent player-authored structures, spatial authority and
+claims, raid scheduling, offline-progression fairness.
 
-### Phase 7 — Meaning · ongoing
+### Phase 7 — Scale · ~2 months
 
-**Ships:** the mystery. What actually happened up there.
-**Concepts:** quest state machines, world events, emergent narrative.
+**Ships:** interest management, multiple shelters, 50+ concurrent, load tests
+driven from Kipchoge that prove it.
+**Concepts:** AoI + spatial hashing, delta compression, sharding, backpressure,
+observability.
+
+### Phase 8 — The wards · ongoing, ships incrementally
+
+**Ships:** wards 1–2 at launch, the rest as updates. Server-wide unlock events.
+The Gate's five-of-seven threshold ceremony.
+**Concepts:** *k*-of-*n* threshold control as level design, world-state events,
+quest state machines, designing a goal most players never reach.
+
+### Phase 9 — The Gate opens · expansion, not launch
+
+Only after the wards are actually found by real players. The surface, the ash,
+the injectors. Explicitly out of scope until then.
 
 ---
 

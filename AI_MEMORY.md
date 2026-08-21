@@ -8,6 +8,7 @@
 ## INDEX
 
 - 2026-08-21 — Project started. Scope, stack, and location decided. Repo scaffolded.
+- 2026-08-21 (later) — Design redirect: the bunker IS the open world. Wards replace the injector. Fauna, Directorate, holding ground added. Roadmap re-ordered.
 
 ---
 
@@ -58,3 +59,35 @@ game's asset foundry and the `env.sh` pattern is reused verbatim.
 **Scaffolded.** `packages/{shared,server,client}`, `docs/`, root workspace
 `package.json`, `.gitignore`, `ROADMAP.md`, `PROJECT_MAP.md`, this file. Git
 initialised. No remote yet.
+
+## 2026-08-21 (later) — Design redirect: the bunker IS the open world
+
+Kalyan redirected the design substantially. Draft 1 of WORLD.md is SUPERSEDED.
+
+**Changed:**
+- The endgame is no longer "reach an injector". It is **seven buried wards**,
+  five of which must be present simultaneously to open the Headworks Gate
+  (k-of-n threshold control as level design). Reaching one target ends too easily.
+- **The bunker is the entire open world.** Marrow scaled from a 1,100-person mine
+  to a 60 km, nine-level, ~90,000-person city. The surface becomes an expansion
+  (Phase 9), not a launch requirement. Better scoping than the original plan:
+  interiors give working occlusion and streaming on modest hardware.
+- **Difficulty is deliberately tuned so most players never finish the ward hunt.**
+  The wards are the horizon; living in Marrow is the content. Guard against the
+  failure mode by making every ward a public, server-wide, permanent unlock.
+- **Fauna added.** The ash was engineered human-safe by design; every other
+  vertebrate was outside tolerance. Drift, Choir, Sow, the Long. Animals, not
+  monsters - hungry and territorial, never hateful.
+- **The Directorate and Custody added.** Scrip denominated in hours, shops in the
+  Commons. Core tension: the Directorate employs players to scavenge the deep
+  AND cannot allow the wards to be found. Your employer is your antagonist.
+- **Holding ground added** as the adrenaline core: claimable derelict sectors,
+  fortification that Sows break, registered-vs-squatted tenancy.
+
+**Roadmap re-ordered:** old Phase 5 (Surface) became Phase 9 (expansion). New
+Phase 5 is the deep and the fauna; new Phase 6 is holding ground; Phase 8 is the
+ward hunt shipping incrementally.
+
+**Phase 4 not started yet** - deliberately gated on this redirect. The art
+direction changed materially (Custody reads printed, everyone else hand-made;
+deep-level palette added), which is exactly why the smoke-test gate existed.
