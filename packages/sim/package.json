@@ -4,7 +4,11 @@
   "private": true,
   "type": "module",
   "main": "./src/sim.ts",
-  "exports": { ".": "./src/sim.ts" },
+  "exports": {
+    ".": "./src/sim.ts",
+    "./agent": "./src/agent.ts",
+    "./core": "./src/core.ts"
+  },
   "scripts": {
     "exp": "tsx experiments/run.ts"
   },

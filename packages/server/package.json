@@ -9,7 +9,8 @@
   },
   "dependencies": {
     "@ashfall/shared": "*",
-    "ws": "^8.18.0"
+    "ws": "^8.18.0",
+    "@ashfall/sim": "*"
   },
   "devDependencies": {
     "@types/node": "^22.10.0",

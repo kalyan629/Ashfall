@@ -17,6 +17,7 @@
  */
 
 import { WebSocketServer, type WebSocket } from "ws";
+import { Population } from "./population.js";
 import {
   TICK_MS,
   applyInput,
@@ -59,8 +60,13 @@ const players = new Map<PlayerId, Player>();
 let nextId = 1;
 let tick = 0;
 
+// Marrow's inhabitants. 60 is enough that the Commons reads as populated
+// without the naive O(n) snapshot scan mattering yet.
+const population = new Population(60);
+
 const wss = new WebSocketServer({ port: PORT });
 console.log(`[ashfall] authoritative server listening on :${PORT}`);
+console.log(`[ashfall] ${population.count} survivors in Marrow`);
 
 wss.on("connection", (socket) => {
   const id = String(nextId++);
@@ -158,18 +164,30 @@ function step(): void {
     }
   }
 
+  // The population lives whether or not anyone is watching. That is the point:
+  // shut off the water, log out, come back, and the consequences happened
+  // without you.
+  population.update(TICK_MS / 1000);
+
   const snapshot: PlayerState[] = [];
   for (const p of players.values()) {
     snapshot.push({ id: p.id, name: p.name, x: p.x, z: p.z, ack: p.ack });
   }
 
-  const msg: ServerMsg = {
-    t: "snapshot",
-    tick,
-    serverTime: Date.now(),
-    players: snapshot,
-  };
-  for (const p of players.values()) send(p.socket, msg);
+  const serverTime = Date.now();
+  // Per-player snapshot, because the NPC list is culled to what that player
+  // can plausibly see. Players are still broadcast wholesale — they are few,
+  // and that is the next thing interest management will fix.
+  for (const p of players.values()) {
+    const msg: ServerMsg = {
+      t: "snapshot",
+      tick,
+      serverTime,
+      players: snapshot,
+      npcs: population.snapshotFor(p),
+    };
+    send(p.socket, msg);
+  }
 }
 
 loop();

@@ -289,6 +289,40 @@ scene.add(headlamp.target);
  *  the beam does not snap back to north every time you stop walking. */
 const facing = new THREE.Vector2(0, -1);
 
+// --- the population --------------------------------------------------------
+/**
+ * Marrow's inhabitants.
+ *
+ * Rendered from a shared geometry and per-occupation material so sixty bodies
+ * cost sixty draw calls rather than sixty material compiles. When the crowd
+ * grows past a few hundred this becomes an InstancedMesh; the material split
+ * by occupation is already the right grouping for that.
+ *
+ * Tinted by trade because a crowd should read as a *workforce* at a glance —
+ * you should be able to see that the Works is staffed without walking there.
+ */
+const OCCUPATION_TINT: Record<string, number> = {
+  scrubber: 0x6d7a86,
+  grower: 0x6f8a5e,
+  digger: 0x8a7358,
+  trader: 0x8a7f5e,
+  custody: 0x59636b, // institutional grey-green: Custody reads printed
+  idle: 0x76736e,
+};
+
+const npcGeo = new THREE.CapsuleGeometry(PLAYER_RADIUS * 0.92, 0.95, 4, 10);
+const npcMats = new Map<string, THREE.MeshStandardMaterial>();
+for (const [occ, hex] of Object.entries(OCCUPATION_TINT)) {
+  npcMats.set(occ, new THREE.MeshStandardMaterial({ color: hex, roughness: 0.85 }));
+}
+
+interface Npc {
+  mesh: THREE.Mesh;
+  bob: number;
+  prev: THREE.Vector2;
+}
+const npcs = new Map<string, Npc>();
+
 // --- the roost -------------------------------------------------------------
 // Hanging from the drift ceiling, deeper in than the player first expects.
 // Placed by hand rather than scattered: the first one you find should be at
@@ -537,6 +571,40 @@ function frame(now: number): void {
     avatars.delete(id);
   }
 
+  // --- the population ---
+  const liveNpcs = net.interpolatedNpcs();
+  const seenNpcs = new Set<string>();
+  let nearest: { name: string; activity: string; d: number } | null = null;
+
+  for (const n of liveNpcs) {
+    seenNpcs.add(n.id);
+    let npc = npcs.get(n.id);
+    if (!npc) {
+      const mesh = new THREE.Mesh(npcGeo, npcMats.get(n.occupation) ?? npcMats.get("idle")!);
+      mesh.castShadow = true;
+      mesh.position.y = 0.86;
+      scene.add(mesh);
+      npc = { mesh, bob: Math.random() * 6, prev: new THREE.Vector2(n.x, n.z) };
+      npcs.set(n.id, npc);
+    }
+    const speed = npc.prev.distanceTo(new THREE.Vector2(n.x, n.z)) / Math.max(dt, 0.001);
+    npc.bob += Math.min(speed, 3) * dt * 2.2;
+    npc.mesh.position.set(n.x, 0.86 + (speed > 0.15 ? Math.abs(Math.sin(npc.bob)) * 0.03 : 0), n.z);
+    npc.prev.set(n.x, n.z);
+
+    const d = Math.hypot(n.x - net.self.x, n.z - net.self.z);
+    if (d < 4.5 && (!nearest || d < nearest.d)) {
+      nearest = { name: n.name, activity: n.activity, d };
+    }
+  }
+
+  // Cull anyone the server stopped sending — they walked out of interest range.
+  for (const [id, npc] of npcs) {
+    if (seenNpcs.has(id)) continue;
+    scene.remove(npc.mesh);
+    npcs.delete(id);
+  }
+
   // --- camera ---
   // Camera height MUST stay under the ceiling (y = 5) and under the lamps
   // (y = 4.4). The first two passes sat at 7.2 and 5.4, which put the lens
@@ -576,7 +644,9 @@ function frame(now: number): void {
     `ASHFALL · MARROW · ${inDeep ? "the drift east — unlit" : "Level 2 — The Commons"}\n` +
     `Year Eleven\n\n` +
     `${name}\n` +
-    `in the bunker (${roster.length}): ${roster.join(", ") || "—"}\n\n` +
+    `in the bunker (${roster.length}): ${roster.join(", ") || "—"}\n` +
+    `survivors in sight: ${liveNpcs.length}\n\n` +
+    (nearest ? `${nearest.name} — ${nearest.activity}\n\n` : "") +
     `headlamp  [${lampOn ? "ON " : "off"}]  ${lampLabel}\n` +
     `WASD move · F headlamp · H ${hum.running ? "cut the handlers" : "restore power"}\n` +
     (roost.alert !== null

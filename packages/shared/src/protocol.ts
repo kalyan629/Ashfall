@@ -51,4 +51,33 @@ export type ClientMsg =
 
 export type ServerMsg =
   | { t: "welcome"; id: PlayerId; tick: number }
-  | { t: "snapshot"; tick: number; serverTime: number; players: PlayerState[] };
+  | {
+      t: "snapshot";
+      tick: number;
+      serverTime: number;
+      players: PlayerState[];
+      npcs: NpcState[];
+    };
+
+// ---------------------------------------------------------------------------
+// Population
+// ---------------------------------------------------------------------------
+
+/**
+ * An inhabitant of Marrow as seen on the wire.
+ *
+ * Deliberately thin. The agent's beliefs, memories, trust graph and goals live
+ * on the server and are never broadcast — partly bandwidth, but mostly because
+ * a client that could read an NPC's true belief state would break the entire
+ * premise. What a survivor thinks is something you have to ask them.
+ */
+export interface NpcState {
+  id: string;
+  name: string;
+  x: number;
+  z: number;
+  /** Drives the tint the client renders, so a crowd reads as a workforce. */
+  occupation: string;
+  /** What they are visibly doing right now — shown on approach. */
+  activity: string;
+}

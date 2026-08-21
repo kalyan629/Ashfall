@@ -23,6 +23,7 @@ import {
   INTERP_DELAY_MS,
   applyInput,
   type Input,
+  type NpcState,
   type PlayerState,
   type ServerMsg,
 } from "@ashfall/shared";
@@ -30,6 +31,7 @@ import {
 export interface RemoteSample {
   t: number;
   players: Map<string, PlayerState>;
+  npcs: Map<string, NpcState>;
 }
 
 export class Net {
@@ -74,7 +76,9 @@ export class Net {
 
     const map = new Map<string, PlayerState>();
     for (const p of msg.players) map.set(p.id, p);
-    this.buffer.push({ t: msg.serverTime, players: map });
+    const npcMap = new Map<string, NpcState>();
+    for (const n of msg.npcs ?? []) npcMap.set(n.id, n);
+    this.buffer.push({ t: msg.serverTime, players: map, npcs: npcMap });
 
     // Keep a second of history; older samples can never be rendered.
     while (this.buffer.length > 2 && now - (this.buffer[0].t - this.clockOffset) > 1000) {
@@ -153,6 +157,46 @@ export class Net {
         x: pa.x + (pb.x - pa.x) * f,
         z: pa.z + (pb.z - pa.z) * f,
       });
+    }
+    return out;
+  }
+
+  /**
+   * NPCs, interpolated exactly the way players are.
+   *
+   * They walk rather than run, so the 100 ms buffer is generous — but sharing
+   * the interpolation path with players matters more than the smoothing does:
+   * one code path means a change is right or wrong for everyone at once, never
+   * subtly different for NPCs.
+   */
+  interpolatedNpcs(): NpcState[] {
+    const renderTime = Date.now() + this.clockOffset - INTERP_DELAY_MS;
+
+    let a: RemoteSample | null = null;
+    let b: RemoteSample | null = null;
+    for (let i = 0; i < this.buffer.length - 1; i++) {
+      if (this.buffer[i].t <= renderTime && this.buffer[i + 1].t >= renderTime) {
+        a = this.buffer[i];
+        b = this.buffer[i + 1];
+        break;
+      }
+    }
+    if (!a || !b) {
+      const last = this.buffer[this.buffer.length - 1];
+      return last ? [...last.npcs.values()] : [];
+    }
+
+    const span = b.t - a.t;
+    const f = span > 0 ? (renderTime - a.t) / span : 0;
+
+    const out: NpcState[] = [];
+    for (const [id, nb] of b.npcs) {
+      const na = a.npcs.get(id);
+      if (!na) {
+        out.push(nb);
+        continue;
+      }
+      out.push({ ...nb, x: na.x + (nb.x - na.x) * f, z: na.z + (nb.z - na.z) * f });
     }
     return out;
   }
