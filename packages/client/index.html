@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>ASHFALL — Marrow</title>
+    <style>
+      :root { color-scheme: dark; }
+      html, body { margin: 0; height: 100%; overflow: hidden; background: #1a1f24; }
+      canvas { display: block; }
+      #hud {
+        position: fixed;
+        top: 12px;
+        left: 14px;
+        margin: 0;
+        font: 12px/1.6 ui-monospace, SFMono-Regular, Menlo, monospace;
+        color: #f2e6d0;
+        text-shadow: 0 1px 3px #000;
+        white-space: pre;
+        pointer-events: none;
+        letter-spacing: 0.02em;
+      }
+    </style>
+  </head>
+  <body>
+    <pre id="hud">connecting…</pre>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
