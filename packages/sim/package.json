@@ -10,7 +10,8 @@
     "./core": "./src/core.ts"
   },
   "scripts": {
-    "exp": "tsx experiments/run.ts"
+    "exp": "tsx experiments/run.ts",
+    "chain": "tsx experiments/chain.ts"
   },
   "devDependencies": {
     "tsx": "^4.19.2",

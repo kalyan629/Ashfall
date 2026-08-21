@@ -162,3 +162,74 @@ finding, and neither was visible without a control to compare against.
   directly publishable one.
 - Does adversarial testimony (an agent that deliberately lies) create the
   polarisation E3 failed to find?
+
+
+---
+
+## 8. The causal chain — 2026-08-21
+
+
+One sentence enters the population from outside and is followed to a physical
+action. No LLM anywhere in it.
+
+| | treated | control (same seed, nobody told) |
+|---|---|---|
+| believers | 60/60 | 0/60 |
+| confident believers | 60 | 0 |
+| rumours about the claim | 69,518 | 0 |
+| goal changes to warn/repair | 15 | 0 |
+| survivors who went and looked | 45 | 0 |
+
+**Attributable: 60 extra believers and 45 inspections from one sentence.**
+
+### Four bugs the chain surfaced, all of the same family
+
+Each one made a working mechanism look like a dead one.
+
+1. **The event log silently evicted the trace.** A 20k ring buffer against
+   2500 ticks x 60 agents. The chain reported zero goal changes while
+   simultaneously reporting 24 inspections *while goal=repair* — a
+   contradiction that only a truncated log can produce. A truncated log is a
+   lie, not a sample.
+
+2. **Direct observation swamped testimony.** At the original investigate rate,
+   25 of 60 survivors simply walked over and checked the scrubber themselves,
+   so treated and control arms landed on identical numbers. If looking is
+   cheap, gossip is pointless — investigation has to be expensive for a social
+   channel to matter at all.
+
+3. **Utility built from four sub-1 multipliers.** credence x confidence x
+   salience x sociability put a fresh, true, urgent claim at 0.11 against a
+   routine-work baseline of 0.3. Survivors believed the air scrubber was
+   failing and went back to work. Personality must MODULATE, not multiply from
+   zero.
+
+4. **Talking was modelled as a destination.** Gossip was gated on adopting a
+    goal, which made speech compete with drinking — so a survivor at
+   thirst 0.90 who had just learned something urgent said nothing, because
+   fetching water scored higher. People mention things *while* doing something
+   else. The goal now biases the TOPIC, never whether you speak. This single
+   change took the chain from 0 rumours to 69,518.
+
+### Also added
+
+- **Novelty and saturation.** Without them the population reached an attractor
+  where every sociable agent warned forever about whichever belief hardened
+  first; a50 sat on warn(l8_creature) at utility 2.70 and nothing new could get
+  a word in. Freshness decays with a 250-tick half-life; saturation falls as
+  corroborations accumulate, so what everyone already knows stops being worth
+  repeating.
+- **Surprise as prediction error.** Memory importance is now weighted by
+  |observed - expected| rather than flat salience, so agents remember what
+  violated their expectations.
+- **First-hand vs hearsay.** A witnessed report carries far more confidence
+  than a repeated one. Without it, one telling left a listener below the
+  threshold at which they will repeat anything, and the chain died silently.
+
+### Known problem with this result
+
+**60/60 at full confidence is too efficient.** Real information does not reach
+total consensus, and 69,518 rumours means the topic is dominating conversation
+far beyond plausibility. The mechanism is now correct and measurable; the
+transmission rate is not yet calibrated. Next: measure spread curves against a
+target adoption fraction rather than assuming saturation is success.

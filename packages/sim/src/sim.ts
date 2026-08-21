@@ -18,6 +18,8 @@
  */
 
 import { type Proposition, type Rng, clamp01, makeRng, pick } from "./core.js";
+import { EventLog } from "./events.js";
+import { selectGoal, shouldSwitch, type Goal } from "./goals.js";
 import {
   type Agent,
   type Identity,
@@ -57,6 +59,8 @@ export interface SimConfig {
    * Any "factions caused this" claim must survive comparison against it.
    */
   shuffleGraph: boolean;
+  /** Event log size. Experiments want the whole trace; the server does not. */
+  logCapacity: number;
 }
 
 export type LodMode = "full" | "tiered";
@@ -70,6 +74,7 @@ export const DEFAULT_CONFIG: SimConfig = {
   beliefHalfLife: 9000,
   lod: "full",
   shuffleGraph: false,
+  logCapacity: 20000,
 };
 
 // ---------------------------------------------------------------------------
@@ -87,6 +92,8 @@ export interface Sim {
   graph: Map<string, string[]>;
   /** Per-tick cost accounting, for the LOD cost/accuracy curve. */
   work: { agentUpdates: number; conversations: number };
+  /** Canonical causal event stream. Metrics are folds over this. */
+  log: EventLog;
 }
 
 const FACTIONS = ["directorate", "cut", "grow", "works", "unaffiliated"] as const;
@@ -101,6 +108,9 @@ export function defaultPropositions(): Proposition[] {
     { id: "gate_openable", truth: true, salience: 0.85, label: "The Gate can be opened" },
     { id: "directorate_knew", truth: true, salience: 0.8, label: "The Directorate knew beforehand" },
     { id: "outside_alive", truth: false, salience: 0.6, label: "Other shelters still answer" },
+    // Actionable by scrubbers, and the subject of the player-to-population
+    // information chain. Starts TRUE and nobody knows it.
+    { id: "scrubber_broken", truth: true, salience: 0.9, label: "The east scrubber is failing" },
   ];
 }
 
@@ -136,6 +146,7 @@ export function createSim(partial: Partial<SimConfig> = {}): Sim {
       level: 1 + Math.floor(rng() * 6),
       memCfg: MEMORY_PRESETS[cfg.memoryMode],
       tier: 0,
+      goal: null,
       // Per-agent RNG stream, so an agent replays identically in isolation.
       rng: makeRng(cfg.seed * 7919 + i * 104729),
       nextMemId: 1,
@@ -155,7 +166,17 @@ export function createSim(partial: Partial<SimConfig> = {}): Sim {
     }
   }
 
-  return { cfg, rng, tick: 0, agents, byId, props: defaultPropositions(), graph, work: { agentUpdates: 0, conversations: 0 } };
+  return {
+    cfg,
+    rng,
+    tick: 0,
+    agents,
+    byId,
+    props: defaultPropositions(),
+    graph,
+    work: { agentUpdates: 0, conversations: 0 },
+    log: new EventLog(cfg.logCapacity),
+  };
 }
 
 /**
@@ -262,18 +283,87 @@ export function step(sim: Sim): void {
       continue;
     }
 
+    // GOAL SELECTION. Beliefs, needs, personality and occupation all feed the
+    // utility, so a belief acquired by testimony can change what this survivor
+    // does next. That edge is the whole reason this block exists.
+    const candidate = selectGoal(a, sim.props, sim.tick);
+    if (!a.goal || shouldSwitch(a.goal.utility, candidate)) {
+      const from = a.goal ? `${a.goal.kind}(${a.goal.prop ?? "-"})` : "none";
+      const to = `${candidate.kind}(${candidate.prop ?? "-"})`;
+      // Must compare SUBJECT too. warn(l8_creature) -> warn(scrubber_broken)
+      // is a real change of behaviour and was previously invisible, because
+      // only the kind was compared and it stayed 'warn'.
+      if (from !== to) {
+        sim.log.emit({
+          t: "goal_changed",
+          tick: sim.tick,
+          agent: a.identity.id,
+          from,
+          to,
+          utility: candidate.utility,
+          reason: candidate.reason,
+        });
+      }
+      a.goal = candidate;
+    }
+
     // Bold agents occasionally go and find out for themselves. This is the
     // only channel by which truth enters the population.
-    if (a.rng() < sim.cfg.investigateRate * (0.2 + a.identity.personality.boldness)) {
-      const p = pick(a.rng, sim.props);
-      updateFromObservation(a, p.id, p.truth, sim.tick);
+    // Investigating is now something an agent DECIDES to do, and it targets
+    // the specific proposition it is uncertain about rather than a random one.
+    const wantsToLook = a.goal?.kind === "investigate" || a.goal?.kind === "repair";
+    const lookRate = sim.cfg.investigateRate * (wantsToLook ? 14 : 0.6);
+    if (a.rng() < lookRate * (0.2 + a.identity.personality.boldness)) {
+      const targetId = a.goal?.prop;
+      const p = (targetId && sim.props.find((x) => x.id === targetId)) || pick(a.rng, sim.props);
+      // SURPRISE = prediction error. What you expected minus what you found.
+      // It drives memory importance, so agents remember what violated their
+      // expectations rather than dumping every event into a store. A confirmed
+      // suspicion is forgettable; a shock is not.
+      const prior = a.beliefs.get(p.id);
+      const expected = prior?.credence ?? 0.5;
+      const surprise = Math.abs((p.truth ? 1 : 0) - expected);
+
+      const obsId = sim.log.emit({
+        t: "observation",
+        tick: sim.tick,
+        agent: a.identity.id,
+        prop: p.id,
+        observed: p.truth,
+        surprise,
+      });
+
+      sim.log.caused(obsId, () => {
+        const before = a.beliefs.get(p.id)?.credence ?? 0.5;
+        updateFromObservation(a, p.id, p.truth, sim.tick);
+        const after = a.beliefs.get(p.id)!;
+        sim.log.emit({
+          t: "belief_updated",
+          tick: sim.tick,
+          agent: a.identity.id,
+          prop: p.id,
+          from: before,
+          to: after.credence,
+          confidence: after.confidence,
+        });
+        if (a.goal?.kind === "repair" && a.goal.prop === p.id) {
+          sim.log.emit({
+            t: "action_completed",
+            tick: sim.tick,
+            agent: a.identity.id,
+            action: `inspected ${p.id}`,
+          });
+        }
+      });
+
       remember(a, {
         tick: sim.tick,
         kind: "witnessed",
         about: p.id,
         participants: [],
         where: `level${a.level}`,
-        importance: p.salience,
+        // Prediction-error-weighted, not flat salience.
+        importance: Math.min(1, p.salience * (0.35 + surprise)),
         valence: p.truth ? -0.3 : 0.1,
         confidence: 0.95,
       });
@@ -342,13 +432,66 @@ function converse(sim: Sim, speaker: Agent): void {
   const listener = sim.byId.get(pick(speaker.rng, nbrs));
   if (!listener) return;
 
-  // Talk about what you care about most and are surest of.
+  // A survivor whose goal is to WARN talks about the thing they want to warn
+  // about. Otherwise they talk about whatever they are surest of. This is the
+  // link that turns 'I now believe X' into 'X spreads'.
+  if (speaker.goal?.kind === 'warn' && speaker.goal.prop) {
+    const p = sim.props.find((x) => x.id === speaker.goal!.prop);
+    if (p) {
+      const claim = testify(speaker, p.id, sim.tick);
+      if (claim) {
+        sim.work.conversations++;
+        const rid = sim.log.emit({
+          t: 'rumour_transmitted', tick: sim.tick,
+          from: speaker.identity.id, to: listener.identity.id,
+          prop: p.id, claim: claim.claim, confidence: claim.confidence,
+          hops: speaker.beliefs.get(p.id)?.corroborations ?? 0,
+        });
+        const before = listener.beliefs.get(p.id)?.credence ?? 0.5;
+        sim.log.caused(rid, () => {
+          updateFromTestimony(listener, p.id, claim.claim, claim.confidence, speaker.identity.id, sim.tick);
+          const after = listener.beliefs.get(p.id)!;
+          sim.log.emit({
+            t: 'belief_updated', tick: sim.tick, agent: listener.identity.id,
+            prop: p.id, from: before, to: after.credence, confidence: after.confidence,
+          });
+          remember(listener, {
+            tick: sim.tick, kind: 'told', about: p.id,
+            participants: [speaker.identity.id], where: 'level' + listener.level,
+            importance: p.salience * 0.6, valence: claim.claim ? -0.2 : 0.05, confidence: 0.8,
+          });
+        });
+        listener.needs.social = clamp01(listener.needs.social - 0.05);
+        return;
+      }
+    }
+  }
+
+  /**
+   * Pick a topic.
+   *
+   * TALKING IS NOT A DESTINATION. An earlier version gated gossip on the agent
+   * having adopted a `warn` goal, which made speech compete with drinking and
+   * eating — so a survivor at thirst 0.90 who had just been told the air
+   * scrubber was failing said nothing at all, because fetching water scored
+   * higher. People mention things *while* doing something else.
+   *
+   * So the goal no longer decides WHETHER you speak, only biases WHAT about.
+   * The topic score is the same novelty-weighted quantity that drives the warn
+   * utility: strength x salience x freshness x saturation. Fresh news beats an
+   * old certainty, and something everyone has already heard stops being worth
+   * repeating.
+   */
   let best: Proposition | null = null;
   let bestScore = -1;
   for (const p of sim.props) {
     const b = speaker.beliefs.get(p.id);
     if (!b) continue;
-    const s = b.confidence * p.salience;
+    const freshness = 0.35 + 1.9 * Math.pow(0.5, (sim.tick - b.lastUpdated) / 250);
+    const saturation = 1 / (1 + b.corroborations * 0.45);
+    let s = b.credence * b.confidence * p.salience * freshness * saturation;
+    // A survivor who has decided to warn about something leads with it.
+    if (speaker.goal?.kind === "warn" && speaker.goal.prop === p.id) s *= 2.5;
     if (s > bestScore) {
       bestScore = s;
       best = p;
@@ -360,7 +503,32 @@ function converse(sim: Sim, speaker: Agent): void {
   if (!claim) return;
 
   sim.work.conversations++;
-  updateFromTestimony(listener, best.id, claim.claim, claim.confidence, speaker.identity.id, sim.tick);
+
+  const rumourId = sim.log.emit({
+    t: 'rumour_transmitted',
+    tick: sim.tick,
+    from: speaker.identity.id,
+    to: listener.identity.id,
+    prop: best.id,
+    claim: claim.claim,
+    confidence: claim.confidence,
+    hops: (speaker.beliefs.get(best.id)?.corroborations ?? 0),
+  });
+
+  const beforeCred = listener.beliefs.get(best.id)?.credence ?? 0.5;
+  sim.log.caused(rumourId, () => {
+    updateFromTestimony(listener, best.id, claim.claim, claim.confidence, speaker.identity.id, sim.tick);
+    const after = listener.beliefs.get(best.id)!;
+    sim.log.emit({
+      t: 'belief_updated',
+      tick: sim.tick,
+      agent: listener.identity.id,
+      prop: best.id,
+      from: beforeCred,
+      to: after.credence,
+      confidence: after.confidence,
+    });
+  });
 
   remember(listener, {
     tick: sim.tick,
@@ -469,4 +637,120 @@ export function measure(sim: Sim): Metrics {
     agentUpdates: sim.work.agentUpdates,
     conversations: sim.work.conversations,
   };
+}
+
+// ---------------------------------------------------------------------------
+// Information injection — the player's edge into the simulation
+// ---------------------------------------------------------------------------
+
+/**
+ * Tell a survivor something.
+ *
+ * This is deliberately NOT a dialogue system. It is an information exchange
+ * modelled as a first-class simulation event, which means the whole chain —
+ * credibility evaluation, belief update, memory formation, onward gossip,
+ * goal change, movement — can be built and TESTED with no LLM anywhere near
+ * it. Natural language can sit on top of this later; it cannot substitute
+ * for it.
+ *
+ * The player enters the trust graph like anyone else: `from` is an ordinary
+ * source id, so a survivor who has caught the player lying will discount them
+ * exactly as they would discount survivor-12.
+ *
+ * @returns the root event id, so a caller can ask the log for everything that
+ *          followed from this one sentence.
+ */
+export function tell(
+  sim: Sim,
+  toId: string,
+  propId: string,
+  claim: boolean,
+  confidence: number,
+  from: string,
+  /**
+   * Is the speaker reporting something they SAW, or passing on hearsay?
+   *
+   * Load-bearing, and missing on the first run. A first-hand account is
+   * epistemically stronger than a rumour, and without modelling that, one
+   * telling left the listener at confidence 0.05 — below the threshold at
+   * which testify() will repeat anything. The player said something true, the
+   * listener believed it, and the chain died silently, because an agent who
+   * believes something but is unsure of it stays quiet.
+   */
+  firsthand = true
+): number | null {
+  const a = sim.byId.get(toId);
+  if (!a) return null;
+
+  // A player who has never spoken to this survivor is not a stranger off the
+  // street — they are a fellow resident of a sealed shelter. Standing is
+  // modest but non-zero, and it becomes a real trust-graph entry from here on,
+  // so lying will cost them exactly what it costs survivor-12.
+  if (!a.trust.has(from)) a.trust.set(from, 0.2);
+
+  const credibility = Math.abs(trustIn(a, from)) * 0.6 + 0.4;
+
+  const rootId = sim.log.emit({
+    t: "information_received",
+    tick: sim.tick,
+    agent: toId,
+    prop: propId,
+    claim,
+    from,
+    credibility,
+  });
+
+  sim.log.caused(rootId, () => {
+    const before = a.beliefs.get(propId)?.credence ?? 0.5;
+    updateFromTestimony(a, propId, claim, confidence, from, sim.tick);
+    const after = a.beliefs.get(propId)!;
+
+    // First-hand testimony carries far more confidence than hearsay. Hearsay
+    // still only nudges, which is what keeps rumours weak until corroborated.
+    if (firsthand) {
+      after.confidence = Math.min(1, after.confidence + 0.34 * credibility * confidence);
+    }
+
+    sim.log.emit({
+      t: "belief_updated",
+      tick: sim.tick,
+      agent: toId,
+      prop: propId,
+      from: before,
+      to: after.credence,
+      confidence: after.confidence,
+    });
+
+    const prop = sim.props.find((p) => p.id === propId);
+    remember(a, {
+      tick: sim.tick,
+      kind: "told",
+      about: propId,
+      participants: [from],
+      where: `level${a.level}`,
+      importance: (prop?.salience ?? 0.5) * 0.75,
+      valence: claim ? -0.2 : 0.05,
+      confidence: 0.85,
+    });
+
+    sim.log.emit({
+      t: "memory_created",
+      tick: sim.tick,
+      agent: toId,
+      memory: a.nextMemId - 1,
+      kind: "told",
+      about: propId,
+      importance: (prop?.salience ?? 0.5) * 0.75,
+    });
+  });
+
+  return rootId;
+}
+
+/** Change the world. Used by interventions: cut the water, break the scrubber. */
+export function setWorldTruth(sim: Sim, propId: string, truth: boolean, by = "world"): void {
+  const p = sim.props.find((x) => x.id === propId);
+  if (!p) return;
+  p.truth = truth;
+  sim.log.emit({ t: "world_changed", tick: sim.tick, prop: propId, truth, by });
 }

@@ -7,6 +7,7 @@
  * ABLATIONS. `MemoryMode` is not a feature flag, it is an independent variable.
  */
 
+import type { Goal } from "./goals.js";
 import {
   type Belief,
   type Memory,
@@ -130,6 +131,8 @@ export interface Agent {
   memCfg: MemoryConfig;
   /** Simulation LOD tier this agent is currently being run at. */
   tier: 0 | 1 | 2 | 3;
+  /** What this survivor is currently trying to do, and how much they want it. */
+  goal: Goal | null;
   rng: Rng;
   /** Monotonic id source for memories. */
   nextMemId: number;
