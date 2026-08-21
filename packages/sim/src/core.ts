@@ -22,18 +22,33 @@
  * was handed to it. There is no global random. That is deliberate: it means a
  * single agent's behaviour can be replayed in isolation.
  */
-export function makeRng(seed: number): () => number {
+export interface Rng {
+  (): number;
+  /**
+   * Current internal state.
+   *
+   * Exposed because a persistent world must restore DETERMINISM, not just
+   * data. Reloading agents with their beliefs intact but their generators
+   * reset to the seed would make every survivor re-run the same random
+   * sequence they already lived through — identical "coin flips" after every
+   * server restart. The state is one 32-bit word; it is the cheapest possible
+   * thing to persist and the whole replay guarantee rests on it.
+   */
+  state(): number;
+}
+
+export function makeRng(seed: number): Rng {
   let a = seed >>> 0;
-  return function rng(): number {
+  const rng = function (): number {
     a |= 0;
     a = (a + 0x6d2b79f5) | 0;
     let t = Math.imul(a ^ (a >>> 15), 1 | a);
     t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
     return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
+  } as Rng;
+  rng.state = () => a >>> 0;
+  return rng;
 }
-
-export type Rng = () => number;
 
 export function pick<T>(rng: Rng, xs: readonly T[]): T {
   return xs[Math.floor(rng() * xs.length)];

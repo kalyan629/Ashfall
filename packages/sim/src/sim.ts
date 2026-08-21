@@ -63,6 +63,11 @@ export interface SimConfig {
   logCapacity: number;
 }
 
+/** In-world seconds per simulation tick. At 5 Hz cognition this makes one
+ *  real minute roughly one in-world hour, so a shift pattern is observable in
+ *  a play session rather than taking a real day. */
+export const WORLD_SECONDS_PER_TICK = 12;
+
 export type LodMode = "full" | "tiered";
 
 export const DEFAULT_CONFIG: SimConfig = {
@@ -85,6 +90,16 @@ export interface Sim {
   cfg: SimConfig;
   rng: Rng;
   tick: number;
+  /**
+   * Seconds of IN-WORLD time, distinct from tick count.
+   *
+   * A tick is a scheduling artefact of whatever host is running the sim; world
+   * time is what shifts, sleep, patrol rotations and rumour freshness are
+   * actually about. Keeping them separate is what makes an offline gap
+   * expressible: after a restart, worldTime can be fast-forwarded across hours
+   * the server was down without simulating every intervening tick.
+   */
+  worldTime: number;
   agents: Agent[];
   byId: Map<string, Agent>;
   props: Proposition[];
@@ -171,6 +186,7 @@ export function createSim(partial: Partial<SimConfig> = {}): Sim {
     cfg,
     rng,
     tick: 0,
+    worldTime: 0,
     agents,
     byId,
     props: defaultPropositions(),
@@ -323,6 +339,7 @@ function assignTiers(sim: Sim): void {
 
 export function step(sim: Sim): void {
   sim.tick++;
+  sim.worldTime += WORLD_SECONDS_PER_TICK;
   assignTiers(sim);
 
   for (const a of sim.agents) {

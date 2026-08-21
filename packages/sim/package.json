@@ -12,7 +12,8 @@
   "scripts": {
     "exp": "tsx experiments/run.ts",
     "chain": "tsx experiments/chain.ts",
-    "audit": "tsx experiments/audit.ts"
+    "audit": "tsx experiments/audit.ts",
+    "persist": "tsx experiments/persist.ts"
   },
   "devDependencies": {
     "tsx": "^4.19.2",
