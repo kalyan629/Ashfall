@@ -172,9 +172,13 @@ def main():
     over = []
     for mat in mine:
         p = f"{mat['prompt']}, {zone_style[mat['zone']]}"
-        n = len(tok(p).input_ids)
-        if n > tok.model_max_length:
-            over.append((mat["slug"], n))
+        # Negatives get truncated exactly the same way and are just as easy to
+        # overrun once a per-material negative is appended -- check both.
+        neg_p = f"{negative}, {mat['negative']}" if mat.get("negative") else negative
+        for label, text in (("prompt", p), ("negative", neg_p)):
+            n = len(tok(text).input_ids)
+            if n > tok.model_max_length:
+                over.append((f"{mat['slug']} [{label}]", n))
     if over:
         print(f"[rank {args.rank}] WARNING: {len(over)} prompts exceed "
               f"{tok.model_max_length} tokens and WILL be truncated:", flush=True)

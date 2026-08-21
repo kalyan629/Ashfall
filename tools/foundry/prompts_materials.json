@@ -9,12 +9,14 @@
 
   "_order_note": "Material description leads, style follows. Total is ~30 tokens so nothing truncates and order is purely about emphasis -- and identity matters more than style.",
 
-  "shared_negative": "shadow, cast shadow, directional light, specular, glossy, ambient occlusion, 3d render, cgi, stylized, cartoon, illustration, decorative, ornamental, marble, gemstone, text, watermark, border, person, furniture, perspective, clean, new",
+  "_flat_note": "NEVER use the word 'flat' in a prompt. Third smoke test 2026-08-21 used 'flat lay albedo, flat even light' meaning flat LIGHTING, and SDXL read it as flat DESIGN -- riveted steel came back as vector art in stained-glass shapes. 'Photograph' and 'diffuse even lighting' say the same thing with no second meaning.",
+
+  "shared_negative": "cast shadow, directional light, specular, glossy, ambient occlusion, 3d render, cgi, stylized, cartoon, illustration, vector, graphic design, poster, stained glass, geometric, decorative, marble, gemstone, text, watermark, border, person, perspective, clean, new",
 
   "zone_style": {
-    "inhabited": "flat lay albedo texture, no shadows, flat even light, seamless tileable, worn, photographic",
-    "deep": "flat lay albedo texture, no shadows, flat even light, seamless tileable, wet, unmaintained, photographic",
-    "custody": "flat lay albedo texture, no shadows, flat even light, seamless tileable, uniform, printed, photographic"
+    "inhabited": "photograph, macro texture, diffuse even lighting, no cast shadows, top down, seamless tileable, worn, photorealistic",
+    "deep": "photograph, macro texture, diffuse even lighting, no cast shadows, top down, seamless tileable, wet, photorealistic",
+    "custody": "photograph, macro texture, diffuse even lighting, no cast shadows, top down, seamless tileable, uniform, photorealistic"
   },
 
   "materials": [
