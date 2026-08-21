@@ -5,17 +5,21 @@
 
   "_lighting_note": "A game albedo map must be flat and unlit -- the engine lights it at runtime, so painted-in shadows double up and read wrong from every angle. 'no shadows, flat even light, albedo' is load-bearing. Do not trim it.",
 
-  "shared_negative": "shadow, cast shadow, directional light, specular, glossy, ambient occlusion, 3d render, cgi, stylized, cartoon, illustration, text, watermark, border, person, furniture, perspective, clean, new",
+  "_palette_note": "NO PALETTE TINT IN zone_style. Second smoke test 2026-08-21 put 'amber and verdigris tint' in the shared style and it overwhelmed material identity -- the mine rock face came back as decorative turquoise stone. You tint a scene with LIGHTS, not with albedo maps: bake amber into every texture and you can never light it differently, and it all goes muddy. Albedo stays neutral; Marrow's sodium lamps do the palette work in-engine. Colour belongs only to materials that genuinely have it (copper is verdigris, rust is orange, concrete is grey).",
+
+  "_order_note": "Material description leads, style follows. Total is ~30 tokens so nothing truncates and order is purely about emphasis -- and identity matters more than style.",
+
+  "shared_negative": "shadow, cast shadow, directional light, specular, glossy, ambient occlusion, 3d render, cgi, stylized, cartoon, illustration, decorative, ornamental, marble, gemstone, text, watermark, border, person, furniture, perspective, clean, new",
 
   "zone_style": {
-    "inhabited": "flat lay albedo, no shadows, flat even light, seamless tileable, amber and verdigris tint, worn",
-    "deep": "flat lay albedo, no shadows, flat even light, seamless tileable, cold grey, wet mineral",
-    "custody": "flat lay albedo, no shadows, flat even light, seamless tileable, institutional grey green, printed"
+    "inhabited": "flat lay albedo texture, no shadows, flat even light, seamless tileable, worn, photographic",
+    "deep": "flat lay albedo texture, no shadows, flat even light, seamless tileable, wet, unmaintained, photographic",
+    "custody": "flat lay albedo texture, no shadows, flat even light, seamless tileable, uniform, printed, photographic"
   },
 
   "materials": [
-    { "slug": "shotcrete",        "zone": "inhabited", "prompt": "sprayed shotcrete, continuous concrete surface, trowel ridges, crazing", "negative": "brick, block, masonry, mortar, joints, courses" },
-    { "slug": "rock_face",        "zone": "inhabited", "prompt": "drilled mine rock face, drill scars, copper zinc veining, rough stone", "negative": "cobblestone, paving, flagstone, tiles, slabs, gaps" },
+    { "slug": "shotcrete",        "zone": "inhabited", "prompt": "sprayed grey shotcrete, continuous concrete surface, trowel ridges, crazing", "negative": "brick, block, masonry, mortar, joints, courses, green, turquoise, colourful" },
+    { "slug": "rock_face",        "zone": "inhabited", "prompt": "drilled grey mine rock face, half barrel drill scars, dusty stone", "negative": "cobblestone, paving, flagstone, tiles, slabs, gaps, turquoise, teal, colourful, veined" },
     { "slug": "steel_plate",      "zone": "inhabited", "prompt": "galvanised steel floor plate, diamond tread, scuffed" },
     { "slug": "riveted_steel",    "zone": "inhabited", "prompt": "riveted steel panel, rivet rows, chipped enamel paint" },
     { "slug": "copper_pipe",      "zone": "inhabited", "prompt": "bundled oxidised copper pipework, verdigris patina, brass fittings" },

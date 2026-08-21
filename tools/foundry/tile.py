@@ -171,7 +171,7 @@ def main():
     tok = pipe.tokenizer
     over = []
     for mat in mine:
-        p = f"{zone_style[mat['zone']]}, {mat['prompt']}"
+        p = f"{mat['prompt']}, {zone_style[mat['zone']]}"
         n = len(tok(p).input_ids)
         if n > tok.model_max_length:
             over.append((mat["slug"], n))
@@ -190,11 +190,12 @@ def main():
 
     for mat in mine:
         slug, zone = mat["slug"], mat["zone"]
-        # Zone style FIRST. CLIP truncates at 77 tokens and drops the tail, so
-        # anything at the end is the thing that silently vanishes. The lighting
-        # clause ("no shadows, flat even light, albedo") has to survive, so it
-        # leads; the material description is what gets clipped if anything does.
-        prompt = f"{zone_style[zone]}, {mat['prompt']}"
+        # Material FIRST, style second. Style led for one iteration to survive
+        # CLIP truncation, and it backfired -- the leading style clause
+        # outweighed material identity and turned a grey mine rock face into
+        # decorative turquoise. Now that every prompt is ~30 tokens nothing
+        # truncates, so order is purely emphasis, and identity wins.
+        prompt = f"{mat['prompt']}, {zone_style[zone]}"
         # Per-material negatives exist because some slugs drift to a nearby
         # archetype -- shotcrete becomes brickwork, rock face becomes paving.
         neg = f"{negative}, {mat['negative']}" if mat.get("negative") else negative
