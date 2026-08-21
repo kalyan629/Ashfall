@@ -1,0 +1,15 @@
+{
+  "name": "@ashfall/sim",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "main": "./src/sim.ts",
+  "exports": { ".": "./src/sim.ts" },
+  "scripts": {
+    "exp": "tsx experiments/run.ts"
+  },
+  "devDependencies": {
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2"
+  }
+}

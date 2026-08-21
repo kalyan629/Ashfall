@@ -161,6 +161,41 @@ the injectors. Explicitly out of scope until then.
 
 ---
 
+## 5b. The AI research track — runs from Phase 2 onward
+
+Inserted 2026-08-21. AI is **not** an add-on at the end; it is a foundational
+layer, and the reason Ashfall is worth building rather than just playing.
+
+Identity change:
+
+> **A persistent multiplayer survival simulation where autonomous inhabitants
+> remember, learn, form relationships, and reshape the world alongside humans.**
+
+See **[docs/RESEARCH.md](docs/RESEARCH.md)** for experimental design and results.
+
+| Track | Ships | Status |
+|---|---|---|
+| **A · Autonomous agents** | identity, needs, occupations, deterministic headless sim | **done** |
+| **B · Memory** | episodic store, importance-weighted retention, retrieval scoring | **done — ablation null, see RESEARCH 5** |
+| **C · Belief / knowledge** | credence + confidence, testimony, gossip, ground truth | **done** |
+| **D · Planning + needs** | goal selection, planner, action policy | next |
+| **E · Social relationships** | trust graph updated by experience, reputation, debts | partial (trust updates from caught lies) |
+| **F · Multi-agent emergence** | factions, territory, trade — each against a null model | blocked on E3 finding no polarisation to explain |
+
+**Hard rule carried into every track:** LLMs may generate *content*, never
+*state transitions*. A model that decides a belief update destroys
+reproducibility. Dialogue and rumour phrasing may be LLM-generated and are
+cached against the seed so replays stay bit-identical.
+
+**The demo this is building toward:** 50 survivors living in a section of
+Marrow. You meet five of them, then deliberately cut the water. You log out.
+The simulation keeps running — shortage, queues, theft, Custody response,
+rumours, shifting alliances. You reconnect and the world remembers. That demo
+rests directly on the persistent authoritative-server architecture that
+already exists.
+
+---
+
 ## 6. Asset strategy — the unfair advantage
 
 Content, not code, is what kills solo game projects. Nobody hand-models 400 props.
